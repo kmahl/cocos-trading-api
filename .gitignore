@@ -64,6 +64,9 @@ Thumbs.db
 # Research folder (BD analysis, not for production)
 research/
 
+# Instructions folder (internal documentation, not for production)
+.github/instructions/
+
 # Logs
 logs
 *.log
