@@ -30,6 +30,7 @@ lines.forEach(line => {
 
 console.log('📋 Aliases encontrados:', aliases);
 
+// 1. ACTUALIZAR PACKAGE.JSON
 // Generar aliases para producción
 const prodAliases = {};
 Object.entries(aliases).forEach(([alias, relativePath]) => {
@@ -47,3 +48,31 @@ packageJson._moduleAliases = prodAliases;
 fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');
 
 console.log('✅ Package.json aliases updated:', Object.keys(prodAliases));
+
+// 2. ACTUALIZAR TSCONFIG.JSON
+// Generar paths para TypeScript
+const tsconfigPaths = {};
+Object.entries(aliases).forEach(([alias, relativePath]) => {
+  tsconfigPaths[`${alias}/*`] = [`${relativePath}/*`];
+});
+
+// Leer tsconfig.json
+const tsconfigPath = path.join(__dirname, '../tsconfig.json');
+const tsconfigContent = fs.readFileSync(tsconfigPath, 'utf8');
+
+// Parsear tsconfig.json preservando comentarios
+let updatedTsconfig = tsconfigContent;
+
+// Buscar la sección paths y reemplazarla
+const pathsMatch = updatedTsconfig.match(/"paths":\s*\{[\s\S]*?\}/);
+if (pathsMatch) {
+  const newPaths = `"paths": ${JSON.stringify(tsconfigPaths, null, 6)}`;
+  updatedTsconfig = updatedTsconfig.replace(/"paths":\s*\{[\s\S]*?\}/, newPaths);
+  
+  // Escribir tsconfig.json actualizado
+  fs.writeFileSync(tsconfigPath, updatedTsconfig);
+  
+  console.log('✅ tsconfig.json paths updated:', Object.keys(tsconfigPaths));
+} else {
+  console.error('❌ No se pudo encontrar la sección "paths" en tsconfig.json');
+}

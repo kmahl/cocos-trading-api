@@ -5,8 +5,9 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 
-import { AppDataSource } from '@/data-source';
+import { AppDataSource } from './data-source';
 import { serverConfig } from '@config/database';
+import { Logger } from '@utils/logger';
 
 const app = express();
 
@@ -31,20 +32,22 @@ const startServer = async (): Promise<void> => {
   try {
     // Conectar a la base de datos
     await AppDataSource.initialize();
-    console.log('✅ Database connected successfully');
+    Logger.database('Database connected successfully');
 
     // Iniciar servidor
     app.listen(serverConfig.port, () => {
-      console.log(`🚀 Server running on port ${serverConfig.port}`);
-      console.log(`🌍 Environment: ${serverConfig.nodeEnv}`);
-      console.log(
-        `🔗 Health check: http://localhost:${serverConfig.port}/health`
-      );
+      Logger.info(`Server running on port ${serverConfig.port}`, {
+        port: serverConfig.port,
+        environment: serverConfig.nodeEnv,
+        healthCheck: `http://localhost:${serverConfig.port}/health`,
+      });
     });
   } catch (error) {
-    console.error('❌ Error starting server:', error);
+    Logger.error('Error starting server', error as Error);
     process.exit(1);
   }
 };
 
-startServer().catch(console.error);
+startServer().catch(error => {
+  Logger.error('Unhandled startup error', error);
+});

@@ -26,14 +26,40 @@
     "noImplicitOverride": true,
     "baseUrl": "./src",
     "paths": {
-      "@/*": ["*"],
-      "@controllers/*": ["controllers/*"],
-      "@services/*": ["services/*"],
-      "@entities/*": ["entities/*"],
-      "@utils/*": ["utils/*"],
-      "@types/*": ["types/*"],
-      "@config/*": ["config/*"]
-    }
+      "@controllers/*": [
+            "./controllers/*"
+      ],
+      "@services/*": [
+            "./services/*"
+      ],
+      "@entities/*": [
+            "./entities/*"
+      ],
+      "@utils/*": [
+            "./utils/*"
+      ],
+      "@types/*": [
+            "./types/*"
+      ],
+      "@config/*": [
+            "./config/*"
+      ],
+      "@middlewares/*": [
+            "./middlewares/*"
+      ],
+      "@dto/*": [
+            "./dto/*"
+      ],
+      "@queues/*": [
+            "./queues/*"
+      ],
+      "@helpers/*": [
+            "./helpers/*"
+      ],
+      "@tests/*": [
+            "../tests/*"
+      ]
+}
   },
   "include": [
     "src/**/*"

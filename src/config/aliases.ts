@@ -12,7 +12,8 @@ export const aliases = {
   '@middlewares': './middlewares',
   '@dto': './dto',
   '@queues': './queues',
-  '@helpers': './helpers', // ← NUEVO ALIAS AGREGADO
+  '@helpers': './helpers',
+  '@tests': '../tests',
 };
 
 // Para desarrollo (apunta a src/)

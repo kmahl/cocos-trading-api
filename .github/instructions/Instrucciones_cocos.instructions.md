@@ -30,7 +30,12 @@ applyTo: '**'
 
 #### Professional Features (Puntos Destacables)
 
-1. **Observabilidad y Monitoreo**
+1. **Path Aliases Unificados**
+   - **Fuente de verdad única**: `src/config/aliases.ts`
+   - **Script automático**: Sincroniza `package.json` y `tsconfig.json`
+   - **Comando**: `npm run update-aliases` actualiza todo automáticamente
+
+2. **Observabilidad y Monitoreo**
    - **DataDog Mock**: Crear un wrapper que simule métricas de negocio
    - **NewRelic Mock**: Simular APM para performance monitoring
    - **Logs Estructurados**: Implementar un logger centralizado (Winston)
