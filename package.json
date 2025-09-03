@@ -1,0 +1,83 @@
+{
+  "name": "cocos-trading-api",
+  "version": "1.0.0",
+  "description": "Backend Challenge - Trading API with TypeORM, Express, and Bull Queue",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index.ts",
+    "build": "npm run update-aliases && tsc",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write src/**/*.ts",
+    "prepare": "husky",
+    "update-aliases": "node scripts/update-aliases.js"
+  },
+  "keywords": [
+    "trading",
+    "api",
+    "typescript",
+    "express",
+    "typeorm",
+    "challenge"
+  ],
+  "author": "Carlos Vizcaya",
+  "license": "MIT",
+  "type": "commonjs",
+  "lint-staged": {
+    "src/**/*.{ts,js}": [
+      "eslint --fix",
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "_moduleAliases": {
+    "@controllers": "dist/controllers",
+    "@services": "dist/services",
+    "@entities": "dist/entities",
+    "@utils": "dist/utils",
+    "@types": "dist/types",
+    "@config": "dist/config",
+    "@middlewares": "dist/middlewares",
+    "@dto": "dist/dto",
+    "@queues": "dist/queues",
+    "@helpers": "dist/helpers"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "module-alias": "^2.2.3",
+    "morgan": "^1.10.1",
+    "pg": "^8.16.3",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^0.3.26"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.34.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jest": "^30.0.0",
+    "@types/module-alias": "^2.0.4",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^24.3.0",
+    "@types/supertest": "^6.0.3",
+    "@typescript-eslint/eslint-plugin": "^8.42.0",
+    "@typescript-eslint/parser": "^8.42.0",
+    "eslint": "^9.34.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "husky": "^9.1.7",
+    "jest": "^30.1.3",
+    "lint-staged": "^16.1.6",
+    "prettier": "^3.6.2",
+    "supertest": "^7.1.4",
+    "ts-node-dev": "^2.0.0",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.9.2"
+  }
+}
