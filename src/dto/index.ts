@@ -113,9 +113,15 @@ export class SearchInstrumentsDto {
   q!: string;
 
   @Expose()
-  @IsNumber({}, { message: 'Limit must be a number' })
-  @Transform(({ value }) => parseInt(value, 10))
   @IsOptional()
+  @IsNumber({}, { message: 'Limit must be a number' })
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') {
+      return undefined;
+    }
+    const parsed = parseInt(value, 10);
+    return isNaN(parsed) ? value : parsed;
+  })
   limit?: number;
 }
 
@@ -127,4 +133,31 @@ export class GetPortfolioDto {
   @IsPositive({ message: 'User ID must be positive' })
   @Transform(({ value }) => parseInt(value, 10))
   userId!: number;
+}
+
+// DTO para query parameters de market data
+export class GetMarketDataDto {
+  @Expose()
+  @IsOptional()
+  @IsString({ message: 'Type must be a string' })
+  @Transform(({ value }) => value?.trim().toUpperCase())
+  type?: string;
+
+  @Expose()
+  @IsOptional()
+  @IsString({ message: 'Start date must be a valid date string (YYYY-MM-DD)' })
+  @Transform(({ value }) => value?.trim())
+  startDate?: string;
+
+  @Expose()
+  @IsOptional()
+  @IsString({ message: 'End date must be a valid date string (YYYY-MM-DD)' })
+  @Transform(({ value }) => value?.trim())
+  endDate?: string;
+
+  @Expose()
+  @IsOptional()
+  @IsNumber({}, { message: 'Limit must be a number' })
+  @Transform(({ value }) => (value ? parseInt(value, 10) : undefined))
+  limit?: number;
 }

@@ -1,8 +1,7 @@
 /**
  * Instrument Service
  *
- * 🚧 WIP: Service migrated to modular routes structure
- * Subject to changes based on business logic decisions
+ * Service para manejo de instrumentos financieros y datos de mercado
  */
 
 import { AppDataSource } from '@data-source/index';
@@ -20,35 +19,29 @@ export class InstrumentService {
    */
   async searchInstruments(
     query: string,
-    limit: number = 10
+    limit: number = 100
   ): Promise<InstrumentResponseDto[]> {
-    Logger.api('Searching instruments', { query, limit });
-
     if (!query || query.trim().length < 1) {
-      Logger.warn('Empty search query provided');
       return [];
     }
 
-    const searchTerm = query.trim().toUpperCase();
+    const searchTerm = query.trim();
 
     try {
-      // Buscar por ticker (exacto primero) y luego por nombre (contiene)
       const instruments = await this.instrumentRepository
         .createQueryBuilder('instrument')
-        .where('UPPER(instrument.ticker) LIKE :ticker', {
-          ticker: `%${searchTerm}%`,
+        .where('UPPER(instrument.ticker) LIKE UPPER(:searchTerm)', {
+          searchTerm: `%${searchTerm}%`,
         })
-        .orWhere('UPPER(instrument.name) LIKE :name', {
-          name: `%${searchTerm}%`,
+        .orWhere('UPPER(instrument.name) LIKE UPPER(:searchTerm)', {
+          searchTerm: `%${searchTerm}%`,
+        })
+        .orWhere('UPPER(instrument.type) LIKE UPPER(:searchTerm)', {
+          searchTerm: `%${searchTerm}%`,
         })
         .orderBy('instrument.ticker', 'ASC')
         .limit(limit)
         .getMany();
-
-      Logger.api('Instruments found', {
-        query,
-        resultCount: instruments.length,
-      });
 
       return instruments.map((instrument: Instrument) => ({
         id: instrument.id,
@@ -63,36 +56,79 @@ export class InstrumentService {
   }
 
   /**
-   * Obtener datos de mercado para un instrumento
+   * Obtener datos de mercado para un instrumento con filtros opcionales
    */
   async getMarketData(
-    instrumentId: number
-  ): Promise<MarketDataResponseDto | null> {
-    Logger.api('Getting market data', { instrumentId });
-
+    instrumentId: number,
+    options?: {
+      startDate?: string;
+      endDate?: string;
+      limit?: number;
+    }
+  ): Promise<MarketDataResponseDto[]> {
     try {
-      const marketData = await this.marketDataRepository.findOne({
-        where: { instrumentid: instrumentId },
-        order: { date: 'DESC' },
-      });
+      const queryBuilder = this.marketDataRepository
+        .createQueryBuilder('md')
+        .where('md.instrumentid = :instrumentId', { instrumentId });
 
-      if (!marketData) {
-        Logger.warn('No market data found', { instrumentId });
-        return null;
+      // Aplicar filtros de fecha
+      if (options?.startDate) {
+        queryBuilder.andWhere('md.date >= :startDate', {
+          startDate: options.startDate,
+        });
       }
 
-      return {
-        instrumentId: marketData.instrumentid,
-        high: marketData.high,
-        low: marketData.low,
-        open: marketData.open,
-        close: marketData.close,
-        previousClose: marketData.previousclose,
-        date: marketData.date.toISOString(),
-      };
+      if (options?.endDate) {
+        queryBuilder.andWhere('md.date <= :endDate', {
+          endDate: options.endDate,
+        });
+      }
+
+      // Ordenar por fecha descendente (más reciente primero)
+      queryBuilder.orderBy('md.date', 'DESC');
+
+      // Aplicar límite
+      if (options?.limit && options.limit > 0) {
+        queryBuilder.limit(Math.min(options.limit, 1000));
+      }
+
+      const marketDataList = await queryBuilder.getMany();
+
+      if (marketDataList.length === 0) {
+        return [];
+      }
+
+      // Procesar registros
+      return marketDataList.map(marketData => {
+        // Manejo robusto de fechas
+        let dateString: string;
+        try {
+          if (marketData.date instanceof Date) {
+            dateString = marketData.date.toISOString();
+          } else if (typeof marketData.date === 'string') {
+            dateString = new Date(marketData.date).toISOString();
+          } else {
+            dateString = new Date().toISOString();
+          }
+        } catch {
+          dateString = new Date().toISOString();
+        }
+
+        return {
+          instrumentId: marketData.instrumentid,
+          high: marketData.high,
+          low: marketData.low,
+          open: marketData.open,
+          close: marketData.close,
+          previousClose: marketData.previousclose,
+          date: dateString,
+        };
+      });
     } catch (error) {
       Logger.error('Error getting market data', error as Error);
-      throw new Error('Failed to get market data');
+      throw new Error(
+        `Failed to get market data for instrument ${instrumentId}`
+      );
     }
   }
 
@@ -100,15 +136,12 @@ export class InstrumentService {
    * Obtener instrumento por ID
    */
   async getInstrumentById(id: number): Promise<InstrumentResponseDto | null> {
-    Logger.api('Getting instrument by ID', { id });
-
     try {
       const instrument = await this.instrumentRepository.findOne({
         where: { id },
       });
 
       if (!instrument) {
-        Logger.warn('Instrument not found', { id });
         return null;
       }
 
@@ -127,6 +160,7 @@ export class InstrumentService {
   /**
    * Obtener precios actuales de múltiples instrumentos en batch
    * ⚡ OPTIMIZACIÓN: 1 query en lugar de N queries
+   * TODO: Ver si esto va a servir
    */
   async getCurrentPricesBatch(
     instrumentIds: number[]
@@ -135,13 +169,7 @@ export class InstrumentService {
       return new Map();
     }
 
-    Logger.api('Getting current prices batch', {
-      instrumentCount: instrumentIds.length,
-      instrumentIds,
-    });
-
     try {
-      // Query TypeORM optimizada con DISTINCT ON
       const marketDataResults = await this.marketDataRepository
         .createQueryBuilder('md')
         .select(['md.instrumentid', 'md.close'])
@@ -151,15 +179,14 @@ export class InstrumentService {
         .addOrderBy('md.date', 'DESC')
         .getRawMany();
 
-      // Una sola iteración: convertir resultados y manejar instrumentos sin datos
       const pricesMap = new Map<number, number>();
 
-      // Primero, inicializar todos con 0
+      // Inicializar todos con 0
       for (const instrumentId of instrumentIds) {
         pricesMap.set(instrumentId, 0);
       }
 
-      // Luego, actualizar con precios reales
+      // Actualizar con precios reales
       for (const row of marketDataResults) {
         const instrumentId = Number(row.md_instrumentid);
         let price = 0;
@@ -172,23 +199,6 @@ export class InstrumentService {
         pricesMap.set(instrumentId, price);
       }
 
-      // Log solo instrumentos sin datos
-      const instrumentsWithoutData = instrumentIds.filter(
-        id => !marketDataResults.some(row => Number(row.md_instrumentid) === id)
-      );
-
-      if (instrumentsWithoutData.length > 0) {
-        Logger.api('Instruments without market data', {
-          instrumentIds: instrumentsWithoutData,
-        });
-      }
-
-      Logger.api('Batch prices loaded successfully', {
-        instrumentCount: instrumentIds.length,
-        pricesFound: marketDataResults.length,
-        instrumentsWithoutData: instrumentsWithoutData.length,
-      });
-
       return pricesMap;
     } catch (error) {
       Logger.error('Error getting batch prices', error as Error);
@@ -198,16 +208,22 @@ export class InstrumentService {
 
   /**
    * Obtener precio actual de un instrumento
+   * @returns El precio de cierre más reciente, o 0 si no hay datos
    */
-  async getCurrentPrice(instrumentId: number): Promise<number | null> {
-    Logger.api('Getting current price', { instrumentId });
-
+  async getCurrentPrice(instrumentId: number): Promise<number> {
     try {
-      const marketData = await this.getMarketData(instrumentId);
-      return marketData?.close || null;
+      const marketDataList = await this.getMarketData(instrumentId, {
+        limit: 1,
+      });
+
+      if (marketDataList.length === 0) {
+        return 0;
+      }
+
+      return marketDataList[0]?.close || 0;
     } catch (error) {
       Logger.error('Error getting current price', error as Error);
-      return null;
+      return 0;
     }
   }
 

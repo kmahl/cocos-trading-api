@@ -2,6 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import { InstrumentService } from '@services';
 import { Logger } from '@utils';
 import { AppError } from '@middlewares';
+import {
+  InstrumentSearchResponseDto,
+  MarketDataApiResponseDto,
+} from '@dto/responses';
 
 export class InstrumentController {
   private instrumentService = new InstrumentService();
@@ -22,30 +26,34 @@ export class InstrumentController {
         throw new AppError('Search query is required', 400);
       }
 
-      const searchLimit = limit ? parseInt(limit as string, 10) : 10;
-
-      if (isNaN(searchLimit) || searchLimit <= 0 || searchLimit > 100) {
-        throw new AppError('Limit must be between 1 and 100', 400);
+      // Validar y parsear límite
+      let searchLimit = 100;
+      if (limit !== undefined && limit !== null) {
+        const parsedLimit =
+          typeof limit === 'string' ? parseInt(limit, 10) : Number(limit);
+        if (!isNaN(parsedLimit) && parsedLimit > 0 && parsedLimit <= 100) {
+          searchLimit = parsedLimit;
+        } else if (!isNaN(parsedLimit)) {
+          throw new AppError('Limit must be between 1 and 100', 400);
+        }
       }
-
-      Logger.api('Searching instruments', { query, limit: searchLimit });
 
       const instruments = await this.instrumentService.searchInstruments(
         query,
         searchLimit
       );
 
-      Logger.api('Instruments search completed', {
-        query,
-        resultsCount: instruments.length,
-      });
-
-      res.status(200).json({
+      const response: InstrumentSearchResponseDto = {
         success: true,
-        data: instruments,
+        total: instruments.length,
+        limit: searchLimit,
+        query: query.trim(),
         timestamp: new Date().toISOString(),
-        message: `Found ${instruments.length} instruments matching "${query}"`,
-      });
+        message: `Found ${instruments.length} instrument${instruments.length !== 1 ? 's' : ''} matching "${query.trim()}"`,
+        data: instruments,
+      };
+
+      res.status(200).json(response);
     } catch (error) {
       Logger.error('Error searching instruments', error as Error);
       next(error);
@@ -74,16 +82,12 @@ export class InstrumentController {
         throw new AppError('Invalid instrument ID provided', 400);
       }
 
-      Logger.api('Getting instrument by ID', { instrumentId });
-
       const instrument =
         await this.instrumentService.getInstrumentById(instrumentId);
 
       if (!instrument) {
         throw new AppError('Instrument not found', 404);
       }
-
-      Logger.api('Instrument retrieved successfully', { instrumentId });
 
       res.status(200).json({
         success: true,
@@ -98,8 +102,12 @@ export class InstrumentController {
   };
 
   /**
-   * GET /api/instruments/:id/market-data
+   * GET /api/instruments/:id/market-data?type={type}&startDate={date}&endDate={date}&limit={number}
    * Obtener datos de mercado de un instrumento
+   * @param type - Opcional: Filtrar por tipo de instrumento
+   * @param startDate - Opcional: Fecha inicio (YYYY-MM-DD)
+   * @param endDate - Opcional: Fecha fin (YYYY-MM-DD)
+   * @param limit - Opcional: Límite de registros (default 100, max 1000)
    */
   getMarketData = async (
     req: Request,
@@ -108,6 +116,7 @@ export class InstrumentController {
   ): Promise<void> => {
     try {
       const instrumentIdParam = req.params.id;
+      const { type, startDate, endDate, limit } = req.query;
 
       if (!instrumentIdParam) {
         throw new AppError('Instrument ID is required', 400);
@@ -119,23 +128,111 @@ export class InstrumentController {
         throw new AppError('Invalid instrument ID provided', 400);
       }
 
-      Logger.api('Getting market data', { instrumentId });
+      // Validar fechas si se proporcionan
+      let validStartDate: string | undefined;
+      let validEndDate: string | undefined;
 
-      const marketData =
-        await this.instrumentService.getMarketData(instrumentId);
-
-      if (!marketData) {
-        throw new AppError('Market data not found for this instrument', 404);
+      if (startDate) {
+        const startDateObj = new Date(startDate as string);
+        if (isNaN(startDateObj.getTime())) {
+          throw new AppError('Invalid start date format. Use YYYY-MM-DD', 400);
+        }
+        validStartDate = startDate as string;
       }
 
-      Logger.api('Market data retrieved successfully', { instrumentId });
+      if (endDate) {
+        const endDateObj = new Date(endDate as string);
+        if (isNaN(endDateObj.getTime())) {
+          throw new AppError('Invalid end date format. Use YYYY-MM-DD', 400);
+        }
+        validEndDate = endDate as string;
+      }
 
-      res.status(200).json({
+      // Validar límite
+      const validLimit = limit
+        ? Math.min(parseInt(limit as string, 10), 1000)
+        : 100;
+
+      // 1. Verificar que el instrumento existe
+      const instrument =
+        await this.instrumentService.getInstrumentById(instrumentId);
+      if (!instrument) {
+        throw new AppError('Instrument not found', 404);
+      }
+
+      // 2. Verificar filtro de tipo si se proporciona
+      if (
+        type &&
+        instrument.type.toUpperCase() !== (type as string).toUpperCase()
+      ) {
+        const response: MarketDataApiResponseDto = {
+          success: true,
+          total: 0,
+          instrumentId,
+          instrumentType: instrument.type,
+          requestedType: type as string,
+          timestamp: new Date().toISOString(),
+          message: `Instrument type '${instrument.type}' does not match requested type '${type}'`,
+          data: [],
+        };
+
+        res.status(200).json(response);
+        return;
+      }
+
+      // 3. Buscar market data para el instrumento
+      const marketDataList = await this.instrumentService.getMarketData(
+        instrumentId,
+        {
+          startDate: validStartDate,
+          endDate: validEndDate,
+          limit: validLimit,
+        }
+      );
+
+      if (marketDataList.length === 0) {
+        const response: MarketDataApiResponseDto = {
+          success: true,
+          total: 0,
+          instrumentId,
+          instrumentType: instrument.type,
+          dateRange:
+            validStartDate || validEndDate
+              ? {
+                  startDate: validStartDate,
+                  endDate: validEndDate,
+                }
+              : undefined,
+          limit: validLimit,
+          timestamp: new Date().toISOString(),
+          message:
+            'No market data available for this instrument with the specified filters',
+          data: [],
+        };
+
+        res.status(200).json(response);
+        return;
+      }
+
+      const response: MarketDataApiResponseDto = {
         success: true,
-        data: marketData,
+        total: marketDataList.length,
+        instrumentId,
+        instrumentType: instrument.type,
+        dateRange:
+          validStartDate || validEndDate
+            ? {
+                startDate: validStartDate,
+                endDate: validEndDate,
+              }
+            : undefined,
+        limit: validLimit,
         timestamp: new Date().toISOString(),
-        message: 'Market data retrieved successfully',
-      });
+        message: `Retrieved ${marketDataList.length} market data record${marketDataList.length !== 1 ? 's' : ''}`,
+        data: marketDataList,
+      };
+
+      res.status(200).json(response);
     } catch (error) {
       Logger.error('Error getting market data', error as Error);
       next(error);

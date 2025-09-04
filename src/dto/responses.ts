@@ -7,6 +7,16 @@ export interface InstrumentResponseDto {
   type: string;
 }
 
+export interface InstrumentSearchResponseDto {
+  success: boolean;
+  total: number;
+  limit: number;
+  query: string;
+  timestamp: string;
+  message: string;
+  data: InstrumentResponseDto[];
+}
+
 export interface MarketDataResponseDto {
   instrumentId: number;
   high: number | null;
@@ -15,6 +25,22 @@ export interface MarketDataResponseDto {
   close: number | null;
   previousClose: number | null;
   date: string;
+}
+
+export interface MarketDataApiResponseDto {
+  success: boolean;
+  data: MarketDataResponseDto[] | null;
+  total: number;
+  instrumentId: number;
+  instrumentType?: string;
+  requestedType?: string;
+  dateRange?: {
+    startDate?: string;
+    endDate?: string;
+  };
+  limit?: number;
+  timestamp: string;
+  message: string;
 }
 
 export interface PositionDto {
