@@ -1,7 +1,8 @@
 import { Router } from 'express';
-import { OrderController } from '@controllers';
-import { validateBody } from '@middlewares';
-import { CreateOrderDto } from '@dto';
+// TODO: Implementar path aliases correctamente para imports más limpios
+import { OrderController } from '../controllers/OrderController';
+import { validateBody } from '../middlewares/validation';
+import { CreateOrderDto } from '../dto/index';
 
 const router = Router();
 const orderController = new OrderController();

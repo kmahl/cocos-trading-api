@@ -8,12 +8,13 @@
  * Pending decision: MARKET orders with null prices handling
  */
 
-import { AppDataSource } from '@data-source/index';
-import { User } from '@entities/User';
-import { Order, OrderSide, OrderStatus } from '@entities/Order';
-import { MarketData } from '@entities/MarketData';
-import { Logger } from '@utils/logger';
-import { PortfolioResponseDto, PositionDto } from '@dto/responses';
+// TODO: Implementar path aliases correctamente para imports más limpios
+import { AppDataSource } from '../data-source/index';
+import { User } from '../entities/User';
+import { Order, OrderSide, OrderStatus } from '../entities/Order';
+import { MarketData } from '../entities/MarketData';
+import { Logger } from '../utils/logger';
+import { PortfolioResponseDto, PositionDto } from '../dto/responses';
 import { InstrumentService } from './InstrumentService';
 
 interface Position {

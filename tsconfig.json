@@ -29,35 +29,74 @@
       "@controllers/*": [
             "./controllers/*"
       ],
+      "@controllers": [
+            "./controllers/index"
+      ],
       "@services/*": [
             "./services/*"
+      ],
+      "@services": [
+            "./services/index"
       ],
       "@entities/*": [
             "./entities/*"
       ],
+      "@entities": [
+            "./entities/index"
+      ],
       "@utils/*": [
             "./utils/*"
+      ],
+      "@utils": [
+            "./utils/index"
       ],
       "@types/*": [
             "./types/*"
       ],
+      "@types": [
+            "./types/index"
+      ],
       "@config/*": [
             "./config/*"
+      ],
+      "@config": [
+            "./config/index"
       ],
       "@middlewares/*": [
             "./middlewares/*"
       ],
+      "@middlewares": [
+            "./middlewares/index"
+      ],
       "@dto/*": [
             "./dto/*"
+      ],
+      "@dto": [
+            "./dto/index"
       ],
       "@queues/*": [
             "./queues/*"
       ],
+      "@queues": [
+            "./queues/index"
+      ],
       "@helpers/*": [
             "./helpers/*"
       ],
+      "@helpers": [
+            "./helpers/index"
+      ],
       "@tests/*": [
             "../tests/*"
+      ],
+      "@tests": [
+            "../tests/index"
+      ],
+      "@data-source/*": [
+            "./data-source/*"
+      ],
+      "@data-source": [
+            "./data-source/index"
       ]
 }
   },

@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { OrderService } from '@services';
-import { Logger } from '@utils';
-import { AppError } from '@middlewares';
+// TODO: Implementar path aliases correctamente para imports más limpios
+import { OrderService } from '../services/OrderService';
+import { Logger } from '../utils/logger';
+import { AppError } from '../middlewares/errorHandler';
 
 interface RequestWithValidatedData extends Request {
   validatedData?: object;

@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { PortfolioService } from '@services';
-import { Logger } from '@utils';
-import { AppError } from '@middlewares';
+// TODO: Implementar path aliases correctamente para imports más limpios
+import { PortfolioService } from '../services/PortfolioService';
+import { Logger } from '../utils/logger';
+import { AppError } from '../middlewares/errorHandler';
 
 export class PortfolioController {
   private portfolioService = new PortfolioService();

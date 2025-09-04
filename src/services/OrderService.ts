@@ -8,14 +8,15 @@
  * Pending decision: Queue implementation for order processing
  */
 
-import { AppDataSource } from '@data-source/index';
-import { Order, OrderStatus } from '@entities/Order';
-import { Logger } from '@utils';
-import { CreateOrderDto, OrderSideDto, OrderTypeDto } from '@dto/index';
-import { OrderResponseDto } from '@dto/responses';
+// TODO: Implementar path aliases correctamente para imports más limpios
+import { AppDataSource } from '../data-source/index';
+import { Order, OrderStatus } from '../entities/Order';
+import { Logger } from '../utils/logger';
+import { CreateOrderDto, OrderSideDto, OrderTypeDto } from '../dto/index';
+import { OrderResponseDto } from '../dto/responses';
 import { PortfolioService } from './PortfolioService';
 import { InstrumentService } from './InstrumentService';
-import { ValidationError } from '@middlewares';
+import { ValidationError } from '../middlewares/errorHandler';
 
 export class OrderService {
   private orderRepository = AppDataSource.getRepository(Order);

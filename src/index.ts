@@ -6,9 +6,10 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 
 import { AppDataSource } from './data-source';
-import { serverConfig } from '@config/database';
-import { Logger } from '@utils';
-import { globalErrorHandler } from '@middlewares';
+// TODO: Implementar path aliases correctamente para imports más limpios
+import { serverConfig } from './config/database';
+import { Logger } from './utils/logger';
+import { globalErrorHandler } from './middlewares/errorHandler';
 import apiRoutes from './routes';
 
 const app = express();

@@ -1,7 +1,8 @@
 import { Router } from 'express';
-import { PortfolioController } from '@controllers';
-import { validateParams } from '@middlewares';
-import { GetPortfolioDto } from '@dto';
+// TODO: Implementar path aliases correctamente para imports más limpios
+import { PortfolioController } from '../controllers/PortfolioController';
+import { validateParams } from '../middlewares/validation';
+import { GetPortfolioDto } from '../dto/index';
 
 const router = Router();
 const portfolioController = new PortfolioController();

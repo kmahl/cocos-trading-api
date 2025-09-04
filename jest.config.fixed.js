@@ -1,3 +1,6 @@
+const { pathsToModuleNameMapper } = require('ts-jest');
+const { compilerOptions } = require('./tsconfig.json');
+
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
@@ -17,6 +20,7 @@ module.exports = {
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
+  moduleNameMapping: pathsToModuleNameMapper(compilerOptions.paths, { prefix: '<rootDir>/src/' }),
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   testTimeout: 30000,
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],

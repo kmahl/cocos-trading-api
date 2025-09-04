@@ -4,11 +4,11 @@
  * Service para manejo de instrumentos financieros y datos de mercado
  */
 
-import { AppDataSource } from '@data-source/index';
-import { Instrument } from '@entities/Instrument';
-import { MarketData } from '@entities/MarketData';
-import { Logger } from '@utils/logger';
-import { InstrumentResponseDto, MarketDataResponseDto } from '@dto/responses';
+import { AppDataSource } from '../data-source/index';
+import { Instrument } from '../entities/Instrument';
+import { MarketData } from '../entities/MarketData';
+import { Logger } from '../utils/logger';
+import { InstrumentResponseDto, MarketDataResponseDto } from '../dto/responses';
 
 export class InstrumentService {
   private instrumentRepository = AppDataSource.getRepository(Instrument);

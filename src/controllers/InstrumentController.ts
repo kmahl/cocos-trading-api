@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
-import { InstrumentService } from '@services';
-import { Logger } from '@utils';
-import { AppError } from '@middlewares';
+// TODO: Implementar path aliases correctamente para imports más limpios
+import { InstrumentService } from '../services/InstrumentService';
+import { Logger } from '../utils/logger';
+import { AppError } from '../middlewares/errorHandler';
 import {
   InstrumentSearchResponseDto,
   MarketDataApiResponseDto,
-} from '@dto/responses';
+} from '../dto/responses';
 
 export class InstrumentController {
   private instrumentService = new InstrumentService();

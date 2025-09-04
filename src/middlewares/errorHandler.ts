@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { Logger } from '@utils/logger';
-import { ApiErrorResponseDto } from '@dto/responses';
+// TODO: Implementar path aliases correctamente para imports más limpios
+import { Logger } from '../utils/logger';
+import { ApiErrorResponseDto } from '../dto/responses';
 
 // Clase para errores personalizados
 export class AppError extends Error {
