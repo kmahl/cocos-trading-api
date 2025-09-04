@@ -31,10 +31,10 @@ export class Order {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ name: 'instrumentid', nullable: false })
+  @Column({ name: 'instrumentid', type: 'int', nullable: false })
   instrumentid!: number;
 
-  @Column({ name: 'userid', nullable: false })
+  @Column({ name: 'userid', type: 'int', nullable: false })
   userid!: number;
 
   @Column({ type: 'varchar', length: 10, nullable: false })

@@ -14,6 +14,7 @@ export const aliases = {
   '@queues': './queues',
   '@helpers': './helpers',
   '@tests': '../tests',
+  '@data-source': './data-source',
 };
 
 // Para desarrollo (apunta a src/)

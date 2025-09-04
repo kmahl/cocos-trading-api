@@ -53,7 +53,10 @@ console.log('✅ Package.json aliases updated:', Object.keys(prodAliases));
 // Generar paths para TypeScript
 const tsconfigPaths = {};
 Object.entries(aliases).forEach(([alias, relativePath]) => {
+  // Path con /* para archivos específicos
   tsconfigPaths[`${alias}/*`] = [`${relativePath}/*`];
+  // Path sin /* para index.ts (barrel exports)
+  tsconfigPaths[alias] = [`${relativePath}/index`];
 });
 
 // Leer tsconfig.json

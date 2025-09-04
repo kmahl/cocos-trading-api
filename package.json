@@ -4,7 +4,7 @@
   "description": "Backend Challenge - Trading API with TypeORM, Express, and Bull Queue",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "build": "npm run update-aliases && tsc",
     "start": "node dist/index.js",
     "test": "jest",
@@ -45,7 +45,8 @@
     "@dto": "dist/dto",
     "@queues": "dist/queues",
     "@helpers": "dist/helpers",
-    "@tests": "tests"
+    "@tests": "tests",
+    "@data-source": "dist/data-source"
   },
   "dependencies": {
     "class-transformer": "^0.5.1",
@@ -81,8 +82,8 @@
     "lint-staged": "^16.1.6",
     "prettier": "^3.6.2",
     "supertest": "^7.1.4",
-    "ts-node-dev": "^2.0.0",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   }
 }

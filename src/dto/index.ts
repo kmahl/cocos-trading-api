@@ -5,7 +5,6 @@ import {
   IsEnum,
   IsOptional,
   IsPositive,
-  Min,
   IsInt,
   registerDecorator,
   ValidationOptions,
@@ -63,13 +62,13 @@ export class CreateOrderDto {
   @IsNotEmpty({ message: 'Instrument ID is required' })
   @IsInt({ message: 'Instrument ID must be an integer' })
   @IsPositive({ message: 'Instrument ID must be positive' })
-  instrumentid!: number;
+  instrumentId!: number;
 
   @Expose()
   @IsNotEmpty({ message: 'User ID is required' })
   @IsInt({ message: 'User ID must be an integer' })
   @IsPositive({ message: 'User ID must be positive' })
-  userid!: number;
+  userId!: number;
 
   @Expose()
   @IsNotEmpty({ message: 'Order side is required' })
@@ -114,10 +113,9 @@ export class SearchInstrumentsDto {
   q!: string;
 
   @Expose()
-  @IsOptional()
   @IsNumber({}, { message: 'Limit must be a number' })
-  @Min(1, { message: 'Limit must be at least 1' })
   @Transform(({ value }) => parseInt(value, 10))
+  @IsOptional()
   limit?: number;
 }
 

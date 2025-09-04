@@ -8,17 +8,17 @@ export interface InstrumentResponseDto {
 }
 
 export interface MarketDataResponseDto {
-  instrumentid: number;
+  instrumentId: number;
   high: number | null;
   low: number | null;
   open: number | null;
   close: number | null;
-  previousclose: number | null;
+  previousClose: number | null;
   date: string;
 }
 
 export interface PositionDto {
-  instrumentid: number;
+  instrumentId: number;
   ticker: string;
   name: string;
   quantity: number;
@@ -44,8 +44,8 @@ export interface PortfolioResponseDto {
 
 export interface OrderResponseDto {
   id: number;
-  instrumentid: number;
-  userid: number;
+  instrumentId: number;
+  userId: number;
   side: string;
   size: number;
   price: number | null;

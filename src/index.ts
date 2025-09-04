@@ -7,25 +7,24 @@ import morgan from 'morgan';
 
 import { AppDataSource } from './data-source';
 import { serverConfig } from '@config/database';
-import { Logger } from '@utils/logger';
+import { Logger } from '@utils';
+import { globalErrorHandler } from '@middlewares';
+import apiRoutes from './routes';
 
 const app = express();
 
-// Middlewares
+// Middlewares de seguridad y parsing
 app.use(helmet());
 app.use(cors());
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check
-app.get('/health', (_req, res) => {
-  res.json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    service: 'cocos-trading-api',
-  });
-});
+// API Routesasdsad
+app.use('/api', apiRoutes);
+
+// Global error handler (debe ir al final)
+app.use(globalErrorHandler);
 
 // Inicializar base de datos y servidor
 const startServer = async (): Promise<void> => {

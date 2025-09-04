@@ -12,7 +12,7 @@ export class MarketData {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ name: 'instrumentid', nullable: false })
+  @Column({ name: 'instrumentid', type: 'int', nullable: false })
   instrumentid!: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
