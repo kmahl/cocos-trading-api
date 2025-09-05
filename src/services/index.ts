@@ -6,4 +6,3 @@ export { OrderService } from './OrderService';
 export { CashCalculator } from './CashCalculator';
 export { PositionCalculator } from './PositionCalculator';
 export { OrderValidator } from './OrderValidator';
-export { MarketDataCalculator } from './MarketDataCalculator';

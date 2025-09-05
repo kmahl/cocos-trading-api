@@ -9,6 +9,12 @@ import { Order, OrderSide } from '../entities/Order';
 import { Position, PositionCalculationResult } from '../types/portfolio';
 import { IPositionCalculator } from '../types/interfaces';
 import { Logger } from '../utils/logger';
+import {
+  toNumberOrZero,
+  calculateMarketValue,
+  calculatePerformancePercent,
+  formatCurrency,
+} from '../utils/financial';
 
 export class PositionCalculator implements IPositionCalculator {
   calculatePositions(
@@ -19,7 +25,7 @@ export class PositionCalculator implements IPositionCalculator {
     const positions: Position[] = [];
 
     for (const [instrumentId, instrumentOrders] of instrumentGroups) {
-      const currentMarketPrice = marketPrices.get(instrumentId) ?? 0;
+      const currentMarketPrice = toNumberOrZero(marketPrices.get(instrumentId));
       const calculation = this.calculatePositionData(
         instrumentOrders,
         currentMarketPrice
@@ -31,9 +37,9 @@ export class PositionCalculator implements IPositionCalculator {
           ticker: instrumentOrders[0]?.instrument?.ticker ?? '',
           name: instrumentOrders[0]?.instrument?.name ?? '',
           quantity: calculation.quantity,
-          averageCost: calculation.averageCost,
-          marketValue: calculation.marketValue,
-          totalReturnPercent: calculation.totalReturnPercent,
+          averageCost: formatCurrency(calculation.averageCost),
+          marketValue: formatCurrency(calculation.marketValue),
+          totalReturnPercent: formatCurrency(calculation.totalReturnPercent),
           totalInvestment: calculation.totalInvestment,
           realizedGains: calculation.realizedGains,
         };
@@ -77,26 +83,29 @@ export class PositionCalculator implements IPositionCalculator {
     // Las órdenes ya vienen ordenadas cronológicamente desde la DB (ORDER BY datetime ASC)
     // Esto garantiza que el procesamiento secuencial funcione como un libro contable
     for (const order of orders) {
-      const price = order.price ?? 0;
+      const pricePerUnit = toNumberOrZero(order.price);
 
       if (order.side === OrderSide.BUY) {
-        const totalCost = quantity * averageCost + order.size * price;
+        const totalCost = quantity * averageCost + order.size * pricePerUnit;
         quantity += order.size;
         averageCost = quantity > 0 ? totalCost / quantity : 0;
-        totalInvestment += order.size * price;
+        totalInvestment += order.size * pricePerUnit;
       } else if (order.side === OrderSide.SELL) {
         if (quantity <= 0) continue;
 
-        const gain = (price - averageCost) * order.size;
+        const gain = (pricePerUnit - averageCost) * order.size;
         realizedGains += gain;
         quantity -= order.size;
       }
     }
 
-    const marketValue = quantity * currentMarketPrice;
+    const marketValue = calculateMarketValue(quantity, currentMarketPrice);
     const totalReturnPercent =
       totalInvestment > 0
-        ? ((realizedGains + marketValue) / totalInvestment) * 100
+        ? calculatePerformancePercent(
+            realizedGains + marketValue,
+            totalInvestment
+          )
         : 0;
 
     return {

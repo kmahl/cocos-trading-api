@@ -12,6 +12,7 @@ import { PortfolioResponseDto, PositionDto } from '../dto/responses';
 import { Position } from '../types/portfolio';
 import { Order } from '../entities/Order';
 import { Logger } from '../utils/logger';
+import { formatCurrency } from '../utils/financial';
 
 export class PortfolioService implements IPortfolioService {
   private userRepository = new UserRepository();
@@ -73,8 +74,8 @@ export class PortfolioService implements IPortfolioService {
     return {
       userId: user.id,
       accountNumber: user.accountNumber,
-      totalValue: Number(totalValue.toFixed(2)),
-      cashBalance: Number(cashBalance.toFixed(2)),
+      totalValue: formatCurrency(totalValue),
+      cashBalance: formatCurrency(cashBalance),
       positions: positionDtos,
     };
   }
@@ -89,11 +90,9 @@ export class PortfolioService implements IPortfolioService {
       ticker: position.ticker,
       name: position.name,
       quantity: position.quantity,
-      currentPrice: Number(
-        (position.marketValue / position.quantity).toFixed(2)
-      ), // Derivado de marketValue
-      marketValue: Number(position.marketValue.toFixed(2)),
-      totalReturnPercent: Number(position.totalReturnPercent.toFixed(2)),
+      currentPrice: formatCurrency(position.marketValue / position.quantity),
+      marketValue: formatCurrency(position.marketValue),
+      totalReturnPercent: formatCurrency(position.totalReturnPercent),
     }));
   }
 
