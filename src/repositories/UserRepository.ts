@@ -3,6 +3,7 @@ import { AppDataSource } from '../data-source/index';
 import { User } from '../entities/User';
 import { Logger } from '../utils/logger';
 import { IUserRepository } from '../types/interfaces';
+import { NotFoundError } from '../middlewares/errorHandler';
 
 /**
  * UserRepository
@@ -29,7 +30,7 @@ export class UserRepository implements IUserRepository {
     });
 
     if (!user) {
-      const error = new Error(`User with ID ${userId} not found`);
+      const error = new NotFoundError(`User with ID ${userId} not found`);
       Logger.error('User not found', error);
       throw error;
     }

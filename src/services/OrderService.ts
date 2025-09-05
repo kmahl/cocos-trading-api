@@ -9,8 +9,8 @@ import { Logger } from '../utils/logger';
 import { CreateOrderDto, OrderSideDto, OrderTypeDto } from '../dto/index';
 import { OrderResponseDto } from '../dto/responses';
 import { PortfolioValidationService } from './PortfolioValidationService';
+import { AppError, ValidationError } from '../middlewares/errorHandler';
 import { InstrumentService } from './InstrumentService';
-import { ValidationError } from '../middlewares/errorHandler';
 
 export class OrderService {
   private orderRepository = AppDataSource.getRepository(Order);
@@ -80,7 +80,7 @@ export class OrderService {
     // 7. Retornar orden actualizada
     const processedOrder = await this.getOrderById(savedOrder.id);
     if (!processedOrder) {
-      throw new Error('Failed to retrieve processed order');
+      throw new AppError('Failed to retrieve processed order', 500);
     }
 
     Logger.order('Order created and processed successfully', {
@@ -167,7 +167,7 @@ export class OrderService {
       where: { id: orderId },
     });
     if (!order) {
-      throw new Error('Order not found for processing');
+      throw new AppError('Order not found for processing', 404);
     }
 
     Logger.order('Processing order', { orderId, status: order.status });

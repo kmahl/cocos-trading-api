@@ -10,6 +10,7 @@ import { AppDataSource } from '../data-source/index';
 import { Order, OrderStatus } from '../entities/Order';
 import { Logger } from '../utils/logger';
 import { IOrderRepository } from '../types/interfaces';
+import { AppError } from '../middlewares/errorHandler';
 
 export class OrderRepository implements IOrderRepository {
   private repository: Repository<Order>;
@@ -65,8 +66,9 @@ export class OrderRepository implements IOrderRepository {
     } catch (error) {
       const err = error instanceof Error ? error.message : 'Unknown error';
       Logger.error('Error retrieving filled orders', { userId, error: err });
-      throw new Error(
-        `Error retrieving filled orders for user ${userId}: ${err}`
+      throw new AppError(
+        `Error retrieving filled orders for user ${userId}: ${err}`,
+        500
       );
     }
   }

@@ -7,6 +7,7 @@ import { Instrument } from '../entities/Instrument';
 import { MarketData } from '../entities/MarketData';
 import { Logger } from '../utils/logger';
 import { InstrumentResponseDto, MarketDataResponseDto } from '../dto/responses';
+import { AppError } from '../middlewares/errorHandler';
 
 export class InstrumentService {
   private instrumentRepository = AppDataSource.getRepository(Instrument);
@@ -49,7 +50,7 @@ export class InstrumentService {
       }));
     } catch (error) {
       Logger.error('Error searching instruments', error as Error);
-      throw new Error('Failed to search instruments');
+      throw new AppError('Failed to search instruments', 500);
     }
   }
 
@@ -124,8 +125,9 @@ export class InstrumentService {
       });
     } catch (error) {
       Logger.error('Error getting market data', error as Error);
-      throw new Error(
-        `Failed to get market data for instrument ${instrumentId}`
+      throw new AppError(
+        `Failed to get market data for instrument ${instrumentId}`,
+        500
       );
     }
   }
@@ -151,7 +153,7 @@ export class InstrumentService {
       };
     } catch (error) {
       Logger.error('Error getting instrument', error as Error);
-      throw new Error('Failed to get instrument');
+      throw new AppError('Failed to get instrument', 500);
     }
   }
 
