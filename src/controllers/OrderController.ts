@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 // TODO: Implementar path aliases correctamente para imports más limpios
 import { OrderService } from '../services/OrderService';
+import { CreateOrderDto } from '../dto/index';
 import { Logger } from '../utils/logger';
 import { AppError } from '../middlewares/errorHandler';
 
 interface RequestWithValidatedData extends Request {
-  validatedData?: object;
+  validatedData?: CreateOrderDto;
 }
 
 export class OrderController {
@@ -27,7 +28,7 @@ export class OrderController {
         throw new AppError('Order data is required and must be validated', 400);
       }
 
-      Logger.order('Creating new order', orderDto as Record<string, unknown>);
+      Logger.order('Creating new order', { ...orderDto });
 
       const order = await this.orderService.createOrder(orderDto);
 

@@ -48,10 +48,9 @@ export interface PositionDto {
   ticker: string;
   name: string;
   quantity: number;
+  currentPrice: number;
   marketValue: number;
-  performancePercent: number;
-  currentPrice: number | null;
-  averagePrice: number;
+  totalReturnPercent: number;
 }
 
 export interface PortfolioResponseDto {
@@ -59,13 +58,7 @@ export interface PortfolioResponseDto {
   accountNumber: string;
   totalValue: number;
   cashBalance: number;
-  totalPerformancePercent: number;
   positions: PositionDto[];
-  summary: {
-    totalPositions: number;
-    totalInstruments: number;
-    lastUpdated: string;
-  };
 }
 
 export interface OrderResponseDto {

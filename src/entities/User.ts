@@ -9,8 +9,13 @@ export class User {
   @Column({ type: 'varchar', length: 255, nullable: false })
   email!: string;
 
-  @Column({ type: 'varchar', length: 20, nullable: false })
-  accountnumber!: string;
+  @Column({
+    name: 'accountnumber',
+    type: 'varchar',
+    length: 20,
+    nullable: false,
+  })
+  accountNumber!: string;
 
   // Relaciones
   @OneToMany('Order', 'user')

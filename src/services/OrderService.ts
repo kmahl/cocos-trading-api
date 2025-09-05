@@ -1,11 +1,5 @@
 /**
  * Order Service
- *
- * 🚧 WIP: Service migrated to modular routes structure
- * Subject to changes based on business logic decisions
- *
- * Handles order processing and validation
- * Pending decision: Queue implementation for order processing
  */
 
 // TODO: Implementar path aliases correctamente para imports más limpios
@@ -14,13 +8,13 @@ import { Order, OrderStatus } from '../entities/Order';
 import { Logger } from '../utils/logger';
 import { CreateOrderDto, OrderSideDto, OrderTypeDto } from '../dto/index';
 import { OrderResponseDto } from '../dto/responses';
-import { PortfolioService } from './PortfolioService';
+import { PortfolioValidationService } from './PortfolioValidationService';
 import { InstrumentService } from './InstrumentService';
 import { ValidationError } from '../middlewares/errorHandler';
 
 export class OrderService {
   private orderRepository = AppDataSource.getRepository(Order);
-  private portfolioService = new PortfolioService();
+  private portfolioValidationService = new PortfolioValidationService();
   private instrumentService = new InstrumentService();
 
   /**
@@ -68,8 +62,8 @@ export class OrderService {
 
     // 5. Crear orden en base de datos
     const order = this.orderRepository.create({
-      instrumentid: instrumentId, // DB usa snake_case
-      userid: userId, // DB usa snake_case
+      instrumentId: instrumentId,
+      userId: userId,
       side,
       size: executionSize,
       price: executionPrice,
@@ -113,8 +107,8 @@ export class OrderService {
 
     return {
       id: order.id,
-      instrumentId: order.instrumentid,
-      userId: order.userid,
+      instrumentId: order.instrumentId,
+      userId: order.userId,
       side: order.side,
       size: order.size,
       price: order.price || 0,
@@ -140,7 +134,7 @@ export class OrderService {
     Logger.order('Getting user orders', { userId, limit });
 
     const orders = await this.orderRepository.find({
-      where: { userid: userId },
+      where: { userId: userId },
       relations: ['instrument'],
       order: { datetime: 'DESC' },
       take: limit,
@@ -148,8 +142,8 @@ export class OrderService {
 
     return orders.map(order => ({
       id: order.id,
-      instrumentId: order.instrumentid,
-      userId: order.userid,
+      instrumentId: order.instrumentId,
+      userId: order.userId,
       side: order.side,
       size: order.size,
       price: order.price || 0,
@@ -204,9 +198,9 @@ export class OrderService {
     const { instrumentId, type, size, amount, price } = orderDto;
 
     // Verificar que el instrumento existe
-    const instrumentExists =
-      await this.instrumentService.instrumentExists(instrumentId);
-    if (!instrumentExists) {
+    const instrument =
+      await this.instrumentService.getInstrumentById(instrumentId);
+    if (!instrument) {
       throw new ValidationError('Instrument not found');
     }
 
@@ -243,7 +237,7 @@ export class OrderService {
     if (side === OrderSideDto.BUY) {
       // Validar cash disponible para compra
       const requiredAmount = size * price;
-      const hasCash = await this.portfolioService.checkAvailableCash(
+      const hasCash = await this.portfolioValidationService.checkAvailableCash(
         userId,
         requiredAmount
       );
@@ -260,11 +254,12 @@ export class OrderService {
     } else {
       // SELL
       // Validar acciones disponibles para venta
-      const hasShares = await this.portfolioService.checkAvailableShares(
-        userId,
-        instrumentId,
-        size
-      );
+      const hasShares =
+        await this.portfolioValidationService.checkAvailableShares(
+          userId,
+          instrumentId,
+          size
+        );
 
       if (!hasShares) {
         throw new ValidationError('Insufficient shares for sale');

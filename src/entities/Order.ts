@@ -32,10 +32,10 @@ export class Order {
   id!: number;
 
   @Column({ name: 'instrumentid', type: 'int', nullable: false })
-  instrumentid!: number;
+  instrumentId!: number;
 
   @Column({ name: 'userid', type: 'int', nullable: false })
-  userid!: number;
+  userId!: number;
 
   @Column({ type: 'varchar', length: 10, nullable: false })
   side!: string;

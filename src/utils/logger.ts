@@ -121,6 +121,21 @@ export class Logger {
     logger.info(`[API] ${message}`, this.getMergedMeta(meta));
   }
 
+  // Validation logging
+  static validation(message: string, meta?: LogMeta) {
+    logger.info(`[VALIDATION] ${message}`, this.getMergedMeta(meta));
+  }
+
+  // Query logging para repositorios
+  static query(message: string, meta?: LogMeta) {
+    logger.info(`[QUERY] ${message}`, this.getMergedMeta(meta));
+  }
+
+  // Warning logging
+  static warning(message: string, meta?: LogMeta) {
+    logger.warn(`[WARNING] ${message}`, this.getMergedMeta(meta));
+  }
+
   // Logger para requests HTTP
   static request(req: {
     method: string;

@@ -13,7 +13,7 @@ export class MarketData {
   id!: number;
 
   @Column({ name: 'instrumentid', type: 'int', nullable: false })
-  instrumentid!: number;
+  instrumentId!: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   high!: number | null;
@@ -27,8 +27,14 @@ export class MarketData {
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   close!: number | null;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  previousclose!: number | null;
+  @Column({
+    name: 'previousclose',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  previousClose!: number | null;
 
   @Column({ type: 'date', nullable: false })
   date!: Date;
