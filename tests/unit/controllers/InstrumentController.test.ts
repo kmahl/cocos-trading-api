@@ -115,7 +115,7 @@ describe('InstrumentController - Unit Tests', () => {
             test('should return 200 with instruments when query is valid', async () => {
                 // Arrange
                 mockRequest.query = { q: 'DYCA', limit: '10' };
-                mockInstrumentService.searchInstruments.mockResolvedValue(mockInstrumentsList);
+                mockInstrumentService.searchInstruments.mockResolvedValue([mockInstruments]); // Solo DYCA
 
                 // Act
                 await instrumentController.searchInstruments(mockRequest as Request, mockResponse as Response, mockNext);
@@ -125,18 +125,18 @@ describe('InstrumentController - Unit Tests', () => {
                 expect(mockResponse.status).toHaveBeenCalledWith(200);
                 expect(mockResponse.json).toHaveBeenCalledWith({
                     success: true,
-                    total: 2,
+                    total: 1,
                     limit: 10,
                     query: 'DYCA',
-                    message: 'Found 2 instruments matching "DYCA"',
-                    data: mockInstrumentsList,
+                    message: 'Found 1 instrument matching "DYCA"',
+                    data: [mockInstruments],
                     timestamp: expect.any(String),
                 });
             });
 
             test('should use default limit when not provided', async () => {
                 // Arrange
-                mockRequest.query = { q: 'ACCIONES' };
+                mockRequest.query = { q: 'ACCIONES' }; // Búsqueda por tipo devuelve múltiples
                 mockInstrumentService.searchInstruments.mockResolvedValue(mockInstrumentsList);
 
                 // Act
@@ -175,13 +175,35 @@ describe('InstrumentController - Unit Tests', () => {
             test('should handle case insensitive search', async () => {
                 // Arrange
                 mockRequest.query = { q: 'dyca', limit: '5' };
-                mockInstrumentService.searchInstruments.mockResolvedValue(mockInstrumentsList);
+                mockInstrumentService.searchInstruments.mockResolvedValue([mockInstruments]); // Solo DYCA
 
                 // Act
                 await instrumentController.searchInstruments(mockRequest as Request, mockResponse as Response, mockNext);
 
                 // Assert
                 expect(mockInstrumentService.searchInstruments).toHaveBeenCalledWith('dyca', 5);
+            });
+
+            test('should return multiple instruments when search matches several', async () => {
+                // Arrange
+                mockRequest.query = { q: 'ACCIONES', limit: '10' };
+                mockInstrumentService.searchInstruments.mockResolvedValue(mockInstrumentsList); // Múltiples resultados
+
+                // Act
+                await instrumentController.searchInstruments(mockRequest as Request, mockResponse as Response, mockNext);
+
+                // Assert
+                expect(mockInstrumentService.searchInstruments).toHaveBeenCalledWith('ACCIONES', 10);
+                expect(mockResponse.status).toHaveBeenCalledWith(200);
+                expect(mockResponse.json).toHaveBeenCalledWith({
+                    success: true,
+                    total: 2,
+                    limit: 10,
+                    query: 'ACCIONES',
+                    message: 'Found 2 instruments matching "ACCIONES"',
+                    data: mockInstrumentsList,
+                    timestamp: expect.any(String),
+                });
             });
 
         });
