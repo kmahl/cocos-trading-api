@@ -1,8 +1,7 @@
 /**
- * Order Service
+ * Order Service - Orchestrates order creation and management
  */
 
-// TODO: Implementar path aliases correctamente para imports más limpios
 import { Order, OrderStatus } from '../entities/Order';
 import { Logger } from '../utils/logger';
 import { CreateOrderDto, OrderSideDto, OrderTypeDto } from '../dto/index';
@@ -11,15 +10,42 @@ import { PortfolioValidationService } from './PortfolioValidationService';
 import { AppError, ValidationError } from '../middlewares/errorHandler';
 import { InstrumentService } from './InstrumentService';
 import { OrderRepository } from '../repositories/OrderRepository';
+import { OrderCalculationService } from './OrderCalculationService';
+import { OrderStatusService } from './OrderStatusService';
+import { OrderExecutionService } from './OrderExecutionService';
 
 export class OrderService {
-  private orderRepository = new OrderRepository();
-  private portfolioValidationService = new PortfolioValidationService();
-  private instrumentService = new InstrumentService();
+  private orderRepository: OrderRepository;
+  private portfolioValidationService: PortfolioValidationService;
+  private instrumentService: InstrumentService;
+  private calculationService: OrderCalculationService;
+  private statusService: OrderStatusService;
+  private executionService: OrderExecutionService;
 
-  /**
-   * Crear y procesar una nueva orden
-   */
+  constructor(
+    orderRepository?: OrderRepository,
+    portfolioValidationService?: PortfolioValidationService,
+    instrumentService?: InstrumentService,
+    calculationService?: OrderCalculationService,
+    statusService?: OrderStatusService,
+    executionService?: OrderExecutionService
+  ) {
+    this.orderRepository = orderRepository || new OrderRepository();
+    this.portfolioValidationService =
+      portfolioValidationService || new PortfolioValidationService();
+    this.instrumentService = instrumentService || new InstrumentService();
+    this.calculationService =
+      calculationService || new OrderCalculationService();
+    this.statusService =
+      statusService || new OrderStatusService(this.portfolioValidationService);
+    this.executionService =
+      executionService ||
+      new OrderExecutionService(
+        this.portfolioValidationService,
+        this.orderRepository
+      );
+  }
+
   async createOrder(orderDto: CreateOrderDto): Promise<OrderResponseDto> {
     const { userId, instrumentId, side, type, size, amount, price } = orderDto;
 
@@ -32,27 +58,28 @@ export class OrderService {
       amount,
     });
 
-    // 1. Validaciones básicas
     await this.validateOrder(orderDto);
 
-    // 2. Obtener precio actual para MARKET orders
     const currentPrice =
       await this.instrumentService.getCurrentPrice(instrumentId);
     if (!currentPrice) {
       throw new ValidationError('Unable to get current price for instrument');
     }
 
-    // 3. Determinar precio de ejecución y cantidad
-    const executionPrice =
-      type === OrderTypeDto.MARKET ? currentPrice : price || 0;
-    const executionSize = size || Math.floor((amount || 0) / executionPrice);
+    const { executionPrice, executionSize } =
+      this.calculationService.calculateOrderExecution(
+        type,
+        currentPrice,
+        size,
+        amount,
+        price
+      );
 
     if (executionSize <= 0) {
       throw new ValidationError('Invalid order size calculated');
     }
 
-    // 4. Validar fondos/acciones
-    const hasValidFunds = await this.checkFundsAndShares(
+    const orderStatus = await this.statusService.determineInitialStatus(
       userId,
       instrumentId,
       side,
@@ -60,10 +87,6 @@ export class OrderService {
       executionPrice
     );
 
-    // 5. Determinar status según validación
-    const orderStatus = hasValidFunds ? OrderStatus.NEW : OrderStatus.REJECTED;
-
-    // 6. Crear orden con el status correcto
     const savedOrder = await this.orderRepository.create({
       instrumentId,
       userId,
@@ -78,56 +101,22 @@ export class OrderService {
     Logger.order('Order created', {
       orderId: savedOrder.id,
       status: orderStatus,
-      hasValidFunds,
     });
 
-    // 7. Si fue rechazada, devolver inmediatamente
     if (orderStatus === OrderStatus.REJECTED) {
       return this.mapOrderToResponse(savedOrder);
     }
 
-    // 8. Procesar orden válida según tipo
     if (type === OrderTypeDto.MARKET) {
-      await this.processOrder(savedOrder.id);
+      await this.executionService.executeOrder(savedOrder.id);
       const processedOrder = await this.getOrderById(savedOrder.id);
       if (!processedOrder) {
         throw new AppError('Failed to retrieve processed order', 500);
       }
       return processedOrder;
-    } else {
-      return this.mapOrderToResponse(savedOrder);
     }
-  }
 
-  /**
-   * Verificar si el usuario tiene fondos/acciones suficientes
-   * @returns true si tiene suficientes, false si no
-   */
-  private async checkFundsAndShares(
-    userId: number,
-    instrumentId: number,
-    side: OrderSideDto,
-    size: number,
-    price: number
-  ): Promise<boolean> {
-    try {
-      if (side === OrderSideDto.BUY) {
-        const requiredAmount = size * price;
-        return await this.portfolioValidationService.checkAvailableCash(
-          userId,
-          requiredAmount
-        );
-      } else {
-        return await this.portfolioValidationService.checkAvailableShares(
-          userId,
-          instrumentId,
-          size
-        );
-      }
-    } catch (error) {
-      Logger.error('Error checking funds/shares', error as Error);
-      return false;
-    }
+    return this.mapOrderToResponse(savedOrder);
   }
 
   /**
@@ -145,7 +134,6 @@ export class OrderService {
       throw new AppError('Order not found', 404);
     }
 
-    // Verificar que la orden pertenece al usuario
     if (order.userId !== userId) {
       throw new AppError('Unauthorized to cancel this order', 403);
     }
@@ -343,54 +331,13 @@ export class OrderService {
         : undefined,
     }));
   }
+
   private async processOrder(orderId: number): Promise<void> {
-    const order = await this.orderRepository.findByIdOrThrow(orderId);
-
-    Logger.order('Processing order', { orderId, status: order.status });
-
-    // Validar que la orden esté en estado procesable
-    if (order.status !== OrderStatus.NEW) {
-      const message = `Cannot process order with status: ${order.status}. Only NEW orders can be processed.`;
-      Logger.warn('Order not processable', {
-        orderId,
-        currentStatus: order.status,
-      });
-      throw new AppError(message, 400);
-    }
-
-    try {
-      // Validar fondos/posiciones AL MOMENTO DEL PROCESAMIENTO
-      await this.validateOrderFundsAtProcessing(
-        order.userId,
-        order.instrumentId,
-        order.side as OrderSideDto,
-        order.size,
-        order.price || 0
-      );
-
-      // En un sistema real, aquí habría lógica compleja de matching
-      // Para el challenge, ejecutamos todas las órdenes inmediatamente
-      order.status = OrderStatus.FILLED;
-      await this.orderRepository.update(order);
-
-      Logger.order('Order filled successfully', {
-        orderId,
-        executionPrice: order.price,
-        size: order.size,
-      });
-    } catch (error) {
-      Logger.error('Error processing order', error as Error);
-      order.status = OrderStatus.REJECTED;
-      await this.orderRepository.update(order);
-
-      // Re-lanzar el error para que el caller lo maneje
-      throw error;
-    }
+    await this.executionService.executeOrder(orderId);
   }
 
   /**
    * Validar fondos disponibles usando PortfolioValidationService
-   * Reemplaza la lógica anterior con queries directas por el sistema de portfolio optimizado
    */
   private async validateFundsWithReserves(
     userId: number,

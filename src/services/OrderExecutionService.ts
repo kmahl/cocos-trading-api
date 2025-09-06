@@ -1,0 +1,55 @@
+/**
+ * Service responsible for order execution logic
+ */
+
+import { Order, OrderStatus } from '../entities/Order';
+import { Logger } from '../utils/logger';
+import { PortfolioValidationService } from './PortfolioValidationService';
+import { OrderRepository } from '../repositories/OrderRepository';
+
+export class OrderExecutionService {
+  constructor(
+    private portfolioValidationService: PortfolioValidationService,
+    private orderRepository: OrderRepository
+  ) {}
+
+  async executeOrder(orderId: number): Promise<void> {
+    const order = await this.orderRepository.findByIdOrThrow(orderId);
+
+    if (order.status !== OrderStatus.NEW) {
+      const message = `Cannot process order with status: ${order.status}. Only NEW orders can be processed.`;
+      Logger.warn('Order not processable', {
+        orderId,
+        currentStatus: order.status,
+      });
+      throw new Error(message);
+    }
+
+    try {
+      await this.validateOrderAtExecution(order);
+      order.status = OrderStatus.FILLED;
+      await this.orderRepository.update(order);
+
+      Logger.order('Order executed successfully', {
+        orderId,
+        executionPrice: order.price,
+        size: order.size,
+      });
+    } catch (error) {
+      Logger.error('Error executing order', error as Error);
+      order.status = OrderStatus.REJECTED;
+      await this.orderRepository.update(order);
+      throw error;
+    }
+  }
+
+  private async validateOrderAtExecution(order: Order): Promise<void> {
+    await this.portfolioValidationService.validateOrderFundsOrThrow(
+      order.userId,
+      order.instrumentId,
+      order.side,
+      order.size,
+      order.price || 0
+    );
+  }
+}

@@ -9,7 +9,11 @@ import { PortfolioService } from './PortfolioService';
 import { Logger } from '../utils/logger';
 
 export class PortfolioValidationService {
-  private portfolioService = new PortfolioService();
+  private portfolioService: PortfolioService;
+
+  constructor(portfolioService?: PortfolioService) {
+    this.portfolioService = portfolioService || new PortfolioService();
+  }
 
   /**
    * Verificar si el usuario tiene suficiente cash para una compra
@@ -79,6 +83,56 @@ export class PortfolioValidationService {
         error,
       });
       return false;
+    }
+  }
+
+  /**
+   * Método centralizado para validar fondos/acciones según el tipo de orden
+   * Elimina duplicación entre OrderStatusService y OrderExecutionService
+   */
+  async validateOrderFunds(
+    userId: number,
+    instrumentId: number,
+    side: string,
+    size: number,
+    price: number
+  ): Promise<boolean> {
+    if (side === 'BUY') {
+      const requiredAmount = size * price;
+      return await this.checkAvailableCash(userId, requiredAmount);
+    } else if (side === 'SELL') {
+      return await this.checkAvailableShares(userId, instrumentId, size);
+    }
+
+    // Para CASH_IN/CASH_OUT siempre retornar true
+    return true;
+  }
+
+  /**
+   * Versión que lanza excepción en lugar de retornar boolean
+   * Para usar en contextos donde se necesita throw instead of return
+   */
+  async validateOrderFundsOrThrow(
+    userId: number,
+    instrumentId: number,
+    side: string,
+    size: number,
+    price: number
+  ): Promise<void> {
+    const isValid = await this.validateOrderFunds(
+      userId,
+      instrumentId,
+      side,
+      size,
+      price
+    );
+
+    if (!isValid) {
+      if (side === 'BUY') {
+        throw new Error('Insufficient available cash balance');
+      } else if (side === 'SELL') {
+        throw new Error('Insufficient available shares');
+      }
     }
   }
 }

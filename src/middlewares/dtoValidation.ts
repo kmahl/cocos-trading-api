@@ -1,3 +1,13 @@
+/**
+ * DTO Validation Middleware
+ *
+ * Handles request validation using class-validator:
+ * - Security features (whitelist, forbid unknown values)
+ * - DTO transformation and validation
+ * - Protects against malicious payloads
+ * - Used for basic request structure validation
+ */
+
 import { Request, Response, NextFunction } from 'express';
 import { validate, ValidationError } from 'class-validator';
 import { plainToInstance } from 'class-transformer';

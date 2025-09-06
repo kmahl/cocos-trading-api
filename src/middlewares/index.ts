@@ -5,9 +5,11 @@ export {
   ValidationError,
   NotFoundError,
 } from './errorHandler';
+
+// DTO validation middleware (security + class-validator)
 export {
   validateDto,
   validateParams,
   validateQuery,
   validateBody,
-} from './validation';
+} from './dtoValidation';

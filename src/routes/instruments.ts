@@ -1,7 +1,7 @@
 import { Router } from 'express';
 // TODO: Implementar path aliases correctamente para imports más limpios
 import { InstrumentController } from '../controllers/InstrumentController';
-import { validateQuery } from '../middlewares/validation';
+import { validateQuery } from '../middlewares/dtoValidation';
 import { SearchInstrumentsDto, GetMarketDataDto } from '../dto/index';
 
 const router = Router();
