@@ -12,9 +12,67 @@ Esta API REST fue desarrollada para cumplir con los requerimientos del challenge
 - **Operaciones de efectivo** (depósitos y retiros) integradas al sistema
 - **Procesamiento de órdenes** con validaciones robustas
 
+## 📚 Índice General
+
+### ✅ **Decisiones Implementadas**
+Todas las decisiones técnicas tomadas durante el desarrollo, con justificaciones y código de implementación:
+
+- **🏗️ Arquitectura del Sistema** - Clean Architecture, Express.js + TypeORM + PostgreSQL
+- **💰 Lógica de Negocio** - Estados de órdenes, validaciones, cálculos de portfolio
+- **🗄️ Base de Datos** - Esquema sin modificaciones, queries optimizadas
+- **🧪 Testing** - Pirámide de testing con énfasis en functional tests
+- **🔒 Seguridad** - Validación multicapa, error handling global
+- **🔧 Herramientas** - Code quality, imports relativos estándar
+
+### 🚀 **Mejoras Identificadas**
+Propuestas de optimización y funcionalidades avanzadas para evolución futura:
+
+- **🗄️ Base de Datos y Performance** - Índices, foreign keys, tabla positions
+- **📊 Observabilidad y Monitoreo** - DataDog, New Relic, HTTP client wrapper
+- **💰 Funcionalidades Financieras** - Rendimiento real, analytics avanzado
+- **🏗️ Arquitectura y Escalabilidad** - Sistema de colas, multi-currency
+- **🔒 Seguridad y Compliance** - Authentication, rate limiting avanzado
+- **🐳 DevOps y Deployment** - Docker, CI/CD pipeline
+
 ---
 
 ## ✅ **Decisiones Implementadas**
+
+### 📋 Índice de Decisiones de Implementación
+
+#### 🏗️ **Arquitectura del Sistema**
+- [Patrón de Arquitectura Elegido](#1-patrón-de-arquitectura-elegido) - Clean Architecture con separación por capas
+- [Framework y Tecnologías Core](#2-framework-y-tecnologías-core) - Express.js + TypeORM + PostgreSQL
+- [Estrategia de Validación](#3-estrategia-de-validación) - class-validator + DTOs personalizados
+- [Unificación de Enums](#4-unificación-de-enums---fuente-de-verdad-única) - Enums definidos en entidades
+
+#### 💰 **Lógica de Negocio**
+- [Manejo de Estados de Órdenes](#1-manejo-de-estados-de-órdenes) - Estados simples con transiciones claras
+- [Ejecución de Órdenes MARKET vs LIMIT](#2-ejecución-de-órdenes-market-vs-limit) - Inmediata vs pendiente
+- [Campo `price` Nullable](#3-campo-price-en-órdenes---nullability-vs-business-logic) - Nullable en BD, validación en app
+- [Cash Operations Single Currency](#4-cash-operations---single-currency-design) - Hardcoded para ARS
+- [Cash Withdrawal Validation](#5-cash-withdrawal-validation---error-vs-rejected-order) - Error HTTP directo
+- [Validaciones de Fondos y Acciones](#6-validaciones-de-fondos-y-acciones) - Pre-ejecución con reservas
+- [Cálculo de Portfolio](#7-cálculo-de-portfolio) - Costo promedio ponderado
+
+#### 🗄️ **Base de Datos**
+- [Esquema Existente vs Modificaciones](#1-esquema-existente-vs-modificaciones) - Mantener schema sin cambios
+- [Estrategia de Queries](#2-estrategia-de-queries) - TypeORM Repository Pattern optimizado
+- [Transacciones](#3-transacciones) - Explícitas para operaciones críticas
+
+#### 🧪 **Testing**
+- [Test Funcional](#1-test-funcional-requerimiento-del-challenge) - End-to-end del flujo de órdenes
+- [Estructura de Testing](#2-estructura-de-testing) - Pirámide con énfasis en functional tests
+
+#### 🔒 **Seguridad y Validación**
+- [Input Validation](#1-input-validation) - Validación en múltiples capas
+- [Error Handling](#2-error-handling) - Global error handler consistente
+
+#### 🔧 **Herramientas de Desarrollo**
+- [Path Aliases](#1-path-aliases---decisión-de-simplicidad) - Imports relativos estándar
+- [Code Quality](#2-code-quality) - ESLint + Prettier + TypeScript strict
+
+---
 
 ### 🏗️ Arquitectura del Sistema
 
@@ -405,294 +463,39 @@ interface ErrorResponse {
 
 ## 🚀 **Mejoras Identificadas**
 
-### 🗄️ Optimizaciones de Base de Datos
+### � Observabilidad y Monitoreo Empresarial
 
-#### 1. Integridad Referencial
-**Mejora**: Agregar Foreign Keys explícitas
-```sql
-ALTER TABLE orders ADD CONSTRAINT fk_orders_user 
-    FOREIGN KEY (userid) REFERENCES users(id);
-ALTER TABLE orders ADD CONSTRAINT fk_orders_instrument 
-    FOREIGN KEY (instrumentid) REFERENCES instruments(id);
-```
+### 📋 Índice de Mejoras Propuestas
 
-**Impacto**:
-- Previene datos huérfanos y inconsistencias
-- Integridad automática a nivel de BD
-- Mejor debugging de problemas de datos
+#### 🗄️ **Base de Datos y Performance**
+- [Integridad Referencial](#1-integridad-referencial) - Foreign Keys explícitas
+- [Índices de Performance](#2-índices-de-performance) - Queries 80% más rápidos
+- [Tabla de Posiciones Desnormalizada](#3-tabla-de-posiciones-desnormalizada) - Portfolio calculation 95% más rápido
+- [Campos de Auditoría](#4-campos-de-auditoría) - Timestamps automáticos
 
-#### 2. Índices de Performance
-**Mejora**: Índices compuestos estratégicos
-```sql
-CREATE INDEX idx_orders_user_instrument ON orders(userid, instrumentid);
-CREATE INDEX idx_orders_datetime ON orders(datetime);
-CREATE INDEX idx_marketdata_instrument_date ON marketdata(instrumentid, date);
-```
+#### 📊 **Observabilidad y Monitoreo**
+- [DataDog Integration](#1-datadog-integration-para-métricas-de-negocio) - Métricas de negocio en tiempo real
+- [HTTP Client Wrapper](#2-wrapper-de-http-client-para-servicios-externos) - Monitoreo de servicios externos
+- [New Relic APM](#3-new-relic-apm-para-monitoreo-en-tiempo-real) - Alertas y performance monitoring
 
-**Impacto**:
-- Queries de portfolio 80% más rápidos
-- Búsquedas por fecha optimizadas
-- Escalabilidad mejorada para alto volumen
+#### 💰 **Funcionalidades Financieras**
+- [Rendimiento Real del Usuario](#1-rendimiento-real-del-usuario) - Performance desde compra vs mercado
+- [Analytics Avanzado](#2-analytics-avanzado) - Comparación con benchmarks
 
-#### 3. Tabla de Posiciones Desnormalizada
-**Mejora**: Tabla positions para performance
-```sql
-CREATE TABLE positions (
-    id SERIAL PRIMARY KEY,
-    user_id INT NOT NULL,
-    instrument_id INT NOT NULL,
-    quantity DECIMAL(15,4) NOT NULL DEFAULT 0,
-    average_price DECIMAL(15,4) NOT NULL DEFAULT 0,
-    total_invested DECIMAL(15,4) NOT NULL DEFAULT 0,
-    unrealized_pnl DECIMAL(15,4) NOT NULL DEFAULT 0,
-    updated_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(user_id, instrument_id)
-);
-```
+#### 🏗️ **Arquitectura y Escalabilidad**
+- [Sistema de Colas](#1-sistema-de-colas-para-órdenes) - Bull Queue + Redis para resiliencia
+- [Multi-Currency Support](#2-multi-currency-support) - Extensión para múltiples monedas
 
-**Impacto**:
-- Portfolio calculation 95% más rápido
-- Escalabilidad de ~100 a ~10,000 usuarios simultáneos
-- Queries simplificadas para frontend
+#### 🔒 **Seguridad y Compliance**
+- [Authentication & Authorization](#1-authentication--authorization) - JWT + Role-based access
+- [Rate Limiting Avanzado](#2-rate-limiting-avanzado) - Límites por usuario y operación
 
-#### 4. Campos de Auditoría
-**Mejora**: Timestamps automáticos
-```sql
-ALTER TABLE orders ADD COLUMN created_at TIMESTAMP DEFAULT NOW();
-ALTER TABLE orders ADD COLUMN updated_at TIMESTAMP DEFAULT NOW();
-
--- Triggers para updated_at automático
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-```
-
-**Impacto**:
-- Debugging mejorado con timestamps precisos
-- Análisis temporal de operaciones
-- Compliance y auditoría automatizada
-
-### 💰 Cálculos Financieros Avanzados
-
-#### 1. Rendimiento Real del Usuario
-**Mejora**: Performance basado en precio de compra vs mercado
-```typescript
-// Actual: Solo rendimiento diario
-performancePercent = ((currentPrice - previousClose) / previousClose) * 100
-
-// Propuesto: Rendimiento desde compra
-userPerformancePercent = ((currentPrice - avgPurchasePrice) / avgPurchasePrice) * 100
-marketPerformancePercent = ((currentPrice - previousClose) / previousClose) * 100
-outperformance = userPerformancePercent - marketPerformancePercent
-```
-
-**Impacto**:
-- UX mejorado: usuarios ven su ganancia/pérdida real
-- Engagement aumentado: progress tracking personal
-- Decisiones de inversión más informadas
-
-#### 2. Analytics Avanzado
-**Mejora**: Dashboard de performance
-- Comparación con benchmarks (MERVAL, S&P500)
-- Alertas de rendimiento y stop-loss automático
-- Análisis de riesgo por diversificación
-
-### 🏗️ Arquitectura y Escalabilidad
-
-#### 1. Sistema de Colas para Órdenes
-**Mejora**: Bull Queue + Redis para procesamiento asíncrono
-```typescript
-// Queue setup
-const orderQueue = new Queue('order processing', {
-  redis: { host: 'localhost', port: 6379 }
-});
-
-// Worker para procesar órdenes
-orderQueue.process('market-order', async (job) => {
-  await processMarketOrder(job.data);
-});
-```
-
-**Impacto**:
-- Resiliencia: órdenes no se pierden si hay fallos
-- Escalabilidad: workers horizontales independientes
-- Throughput: procesamiento concurrente de múltiples órdenes
-
-#### 2. Multi-Currency Support
-**Mejora**: Extensión para múltiples monedas
-```typescript
-interface CashOperation {
-  userId: number;
-  amount: number;
-  currency: 'ARS' | 'USD' | 'EUR' | 'BTC';
-  exchangeRate?: number;
-}
-
-class MultiCurrencyService {
-  async deposit(operation: CashOperation): Promise<Order> {
-    const instrument = await this.getInstrumentByCurrency(operation.currency);
-    const exchangeRate = await this.getExchangeRate(operation.currency);
-    // Lógica de conversión automática
-  }
-}
-```
-
-**Impacto**:
-- Mercados internacionales (NYSE, NASDAQ)
-- Diversificación de portfolio en múltiples currencies
-- Arbitraje automático entre mercados
-
-#### 3. Observabilidad Empresarial
-**Mejora**: Monitoring y métricas avanzadas
-```typescript
-// DataDog integration
-datadog.increment('orders.submitted.total', 1, { 
-  side: order.side, 
-  type: order.type 
-});
-
-// NewRelic APM
-newrelic.addCustomAttribute('portfolio.value', portfolioValue);
-newrelic.recordMetric('portfolio.performance.percent', performancePercent);
-```
-
-**Impacto**:
-- Monitoring en tiempo real de métricas de negocio
-- Alertas proactivas para issues críticos
-- Analytics para optimización de producto
-
-### 🔒 Seguridad y Compliance
-
-#### 1. Authentication & Authorization
-**Mejora**: Sistema completo de auth
-```typescript
-// JWT + Role-based access
-interface UserToken {
-  userId: number;
-  roles: ('user' | 'admin' | 'trader')[];
-  permissions: string[];
-}
-
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('trader')
-async createOrder(@Request() req, @Body() orderData: CreateOrderDto) {
-  // Solo usuarios con rol 'trader' pueden crear órdenes
-}
-```
-
-#### 2. Rate Limiting Avanzado
-**Mejora**: Límites por usuario y operación
-```typescript
-// Rate limiting por tipo de operación
-const tradingLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minuto
-  max: 10, // máximo 10 órdenes por minuto
-  keyGenerator: (req) => `trading:${req.user.id}`,
-});
-
-const portfolioLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 100, // consultas de portfolio más frecuentes
-});
-```
-
-### 🐳 DevOps y Deployment
-
-#### 1. Containerización Completa
-**Mejora**: Docker + Docker Compose setup
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  api:
-    build: .
-    ports:
-      - "3000:3000"
-    depends_on:
-      - postgres
-      - redis
-    
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: trading_db
-    
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
-```
-
-#### 2. CI/CD Pipeline
-**Mejora**: Automated testing y deployment
-```yaml
-# .github/workflows/ci.yml
-name: CI/CD Pipeline
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - run: npm test
-      - run: npm run test:coverage
-  
-  deploy:
-    needs: test
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - run: docker build -t trading-api .
-      - run: docker push $REGISTRY/trading-api
-```
+#### 🐳 **DevOps y Deployment**
+- [Containerización Completa](#1-containerización-completa) - Docker + Docker Compose
+- [CI/CD Pipeline](#2-cicd-pipeline) - Testing y deployment automatizado
 
 ---
 
-## 📊 **Roadmap de Implementación**
-
-### **�‍♂️ Quick Wins (1-2 días)**
-- Rate limiting middleware
-- Health checks avanzados (/health, /metrics)
-- Basic Docker setup
-- Swagger documentation completa
-
-### **🔧 Medium Term (1 semana)**
-- Tabla positions desnormalizada
-- Índices de BD estratégicos
-- Rendimiento real del usuario
-- Sistema de colas básico
-
-### **🏢 Enterprise Features (2-3 semanas)**
-- Authentication/Authorization completo
-- Multi-tenant architecture
-- Advanced analytics dashboard
-- Performance testing suite
-
----
-
-## 🎯 **Conclusiones**
-
-### **✅ Lo Implementado (Challenge Completo)**
-Esta implementación balancea **simplicidad** y **robustez**, cumpliendo todos los requerimientos del challenge mientras establece una base sólida para evolución. Las decisiones priorizan:
-
-1. **Correctitud** en la lógica de negocio financiera
-2. **Maintainability** a través de arquitectura limpia
-3. **Performance** en operaciones críticas
-4. **Developer Experience** con herramientas modernas
-
-### **🚀 Lo Identificado (Vision de Producto)**
-Las mejoras propuestas transformarían el sistema en una plataforma enterprise-ready, con capacidad para:
-
-1. **Escalar** a miles de usuarios simultáneos
-2. **Soportar** múltiples mercados y currencies
-3. **Monitorear** métricas de negocio en tiempo real
-4. **Mantener** alta disponibilidad y compliance
-
-El resultado es una API production-ready que demuestra conocimiento técnico sólido y comprensión de requerimientos de negocio, tanto actuales como futuros.
 
 ### 1. Patrón de Arquitectura Elegido
 
