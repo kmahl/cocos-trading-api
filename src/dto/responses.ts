@@ -47,9 +47,15 @@ export interface PositionDto {
   instrumentId: number;
   ticker: string;
   name: string;
-  quantity: number;
+
+  quantity: {
+    total: number; // Acciones desde órdenes FILLED (BUY-SELL)
+    available: number; // total - reserved
+    reserved: number; // Acciones en órdenes SELL NEW
+  };
+
   currentPrice: number;
-  marketValue: number;
+  marketValue: number; // quantity.total * currentPrice
   totalReturnPercent: number;
 }
 
@@ -57,7 +63,13 @@ export interface PortfolioResponseDto {
   userId: number;
   accountNumber: string;
   totalValue: number;
-  cashBalance: number;
+
+  cashBalance: {
+    total: number; // Cash desde órdenes FILLED
+    available: number; // total - reserved
+    reserved: number; // Cash en órdenes BUY NEW
+  };
+
   positions: PositionDto[];
 }
 

@@ -5,8 +5,65 @@ interface LogMeta {
   [key: string]: unknown;
 }
 
-// Configuración de formato personalizado
-const customFormat = winston.format.combine(
+// Iconos para categorías
+const icons = {
+  DATABASE: '🗄️',
+  ORDER: '📈',
+  PORTFOLIO: '💼',
+  AUTH: '🔐',
+  API: '🌐',
+  VALIDATION: '✅',
+  QUERY: '🔍',
+  WARNING: '⚠️',
+  ERROR: '❌',
+  SUCCESS: '✅',
+  INFO: 'ℹ️',
+};
+
+// Formato colorido para consola
+const coloredConsoleFormat = winston.format.combine(
+  winston.format.timestamp({
+    format: 'HH:mm:ss',
+  }),
+  winston.format.colorize(),
+  winston.format.printf(({ timestamp, level, message, ...meta }) => {
+    // Asegurar que message es string
+    const messageStr = String(message);
+
+    // Extraer el tag del mensaje si existe
+    const tagMatch = messageStr.match(/^\[([^\]]+)\]/);
+    const tag = tagMatch ? tagMatch[1] : '';
+    const cleanMessage = tagMatch
+      ? messageStr.replace(/^\[[^\]]+\]\s*/, '')
+      : messageStr;
+
+    // Obtener icono específico del tag
+    let icon = '📝'; // icono por defecto
+    if (tag && icons[tag as keyof typeof icons]) {
+      icon = icons[tag as keyof typeof icons];
+    }
+
+    // Formatear metadata si existe
+    let formattedMeta = '';
+    const filteredMeta = { ...meta };
+    delete filteredMeta.service;
+    delete filteredMeta.environment;
+    // Esto no creo que sea optimo para los logs de alta frecuencia y en la nube, pero para desarrollo local está bien
+    if (Object.keys(filteredMeta).length > 0) {
+      formattedMeta =
+        '\n  📊 ' +
+        JSON.stringify(filteredMeta, null, 2)
+          .split('\n')
+          .map(line => '     ' + line)
+          .join('\n');
+    }
+
+    return `[${timestamp}] ${icon} ${level}: ${cleanMessage}${formattedMeta}`;
+  })
+);
+
+// Configuración de formato para archivos (JSON estructurado)
+const fileFormat = winston.format.combine(
   winston.format.timestamp({
     format: 'YYYY-MM-DD HH:mm:ss',
   }),
@@ -30,27 +87,24 @@ const customFormat = winston.format.combine(
 // Logger principal
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: customFormat,
+  format: fileFormat,
   transports: [
-    // Console output para desarrollo
+    // Console output mejorado para desarrollo
     new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      ),
+      format: coloredConsoleFormat,
     }),
 
     // Archivo para errores
     new winston.transports.File({
       filename: 'logs/error.log',
       level: 'error',
-      format: customFormat,
+      format: fileFormat,
     }),
 
     // Archivo para todos los logs
     new winston.transports.File({
       filename: 'logs/combined.log',
-      format: customFormat,
+      format: fileFormat,
     }),
   ],
 });

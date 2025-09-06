@@ -7,7 +7,7 @@ import { User } from '../entities/User';
 import { Instrument } from '../entities/Instrument';
 import { PortfolioResponseDto, OrderResponseDto } from '../dto/responses';
 import { CreateOrderDto } from '../dto/index';
-import { Position, CashCalculationResult } from '../types/portfolio';
+import { CashCalculationResult } from '../types/portfolio';
 import { OrderValidationResult, OrderProcessingResult } from '../types/orders';
 import {
   CurrentInstrumentMarketData,
@@ -18,10 +18,9 @@ export interface IUserRepository {
   findById(id: number): Promise<User | null>;
   findByIdOrThrow(id: number): Promise<User>;
 }
-
+// TODO: ESTO NO TIENE TODOS LOS METODOS EXISTENTES EN ORDERREPOSITORY
 export interface IOrderRepository {
   findByUserId(userId: number, limit?: number): Promise<Order[]>;
-  getFilledOrdersByUserId(userId: number): Promise<Order[]>;
 }
 export interface IInstrumentRepository {
   findById(id: number): Promise<Instrument | null>;
@@ -46,9 +45,21 @@ export interface ICashCalculator {
 
 export interface IPositionCalculator {
   calculatePositions(
-    tradingOrders: Order[],
+    allOrders: Order[],
     marketPrices: Map<number, number>
-  ): Position[];
+  ): Array<{
+    instrumentId: number;
+    ticker: string;
+    name: string;
+    quantity: {
+      total: number;
+      available: number;
+      reserved: number;
+    };
+    currentPrice: number;
+    marketValue: number;
+    totalReturnPercent: number;
+  }>;
 }
 
 export interface IOrderService {

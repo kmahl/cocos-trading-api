@@ -5,45 +5,77 @@
  * Implementa el algoritmo: CostoPromedioNuevo = (UnidadesPrevias×CostoPromedioPrevio + NuevasUnidades×PrecioCompra) / UnidadesTotales
  */
 
-import { Order, OrderSide } from '../entities/Order';
-import { Position, PositionCalculationResult } from '../types/portfolio';
+import { Order, OrderSide, OrderStatus } from '../entities/Order';
+import { PositionCalculationResult } from '../types/portfolio';
 import { IPositionCalculator } from '../types/interfaces';
 import { Logger } from '../utils/logger';
 import {
   toNumberOrZero,
   calculateMarketValue,
   calculatePerformancePercent,
-  formatCurrency,
 } from '../utils/financial';
 
 export class PositionCalculator implements IPositionCalculator {
   calculatePositions(
-    tradingOrders: Order[],
+    allOrders: Order[],
     marketPrices: Map<number, number>
-  ): Position[] {
+  ): Array<{
+    instrumentId: number;
+    ticker: string;
+    name: string;
+    quantity: {
+      total: number;
+      available: number;
+      reserved: number;
+    };
+    currentPrice: number;
+    marketValue: number;
+    totalReturnPercent: number;
+  }> {
+    // Filtrar solo órdenes de trading (BUY/SELL)
+    const tradingOrders = allOrders.filter(
+      order => order.side === OrderSide.BUY || order.side === OrderSide.SELL
+    );
+
     const instrumentGroups = this.groupOrdersByInstrument(tradingOrders);
-    const positions: Position[] = [];
+    const positions: any[] = [];
 
     for (const [instrumentId, instrumentOrders] of instrumentGroups) {
       const currentMarketPrice = toNumberOrZero(marketPrices.get(instrumentId));
+
+      // Calcular cantidad total desde órdenes FILLED
+      const filledOrders = instrumentOrders.filter(
+        order => order.status === OrderStatus.FILLED
+      );
       const calculation = this.calculatePositionData(
-        instrumentOrders,
+        filledOrders,
         currentMarketPrice
       );
 
       if (calculation.quantity > 0) {
-        const position: Position = {
+        // Calcular acciones reservadas desde órdenes SELL NEW
+        const reservedShares = instrumentOrders
+          .filter(
+            order =>
+              order.status === OrderStatus.NEW && order.side === OrderSide.SELL
+          )
+          .reduce((total, order) => total + order.size, 0);
+
+        const availableShares = calculation.quantity - reservedShares;
+
+        positions.push({
           instrumentId,
           ticker: instrumentOrders[0]?.instrument?.ticker ?? '',
           name: instrumentOrders[0]?.instrument?.name ?? '',
-          quantity: calculation.quantity,
-          averageCost: formatCurrency(calculation.averageCost),
-          marketValue: formatCurrency(calculation.marketValue),
-          totalReturnPercent: formatCurrency(calculation.totalReturnPercent),
-          totalInvestment: calculation.totalInvestment,
-          realizedGains: calculation.realizedGains,
-        };
-        positions.push(position);
+          quantity: {
+            total: calculation.quantity,
+            available: availableShares,
+            reserved: reservedShares,
+          },
+          currentPrice: currentMarketPrice,
+          marketValue: calculation.marketValue,
+          totalReturnPercent: calculation.totalReturnPercent,
+        });
       }
     }
 

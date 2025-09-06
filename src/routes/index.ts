@@ -4,6 +4,7 @@ import { Router } from 'express';
 import portfolioRoutes from './portfolio';
 import instrumentRoutes from './instruments';
 import orderRoutes from './orders';
+import orderProcessingRoutes from './order-processing';
 import healthRoutes from './health';
 
 const router = Router();
@@ -29,6 +30,12 @@ router.use('/instruments', instrumentRoutes);
  * Base path: /api/orders
  */
 router.use('/orders', orderRoutes);
+
+/**
+ * Order Processing routes (simula cola de procesamiento)
+ * Base path: /api/order-processing
+ */
+router.use('/order-processing', orderProcessingRoutes);
 
 /**
  * Health check routes
@@ -63,6 +70,11 @@ router.get('/', (req, res) => {
           create: 'POST /api/orders',
           userHistory: '/api/orders/user/:userId',
           byId: '/api/orders/:orderId',
+        },
+        orderProcessing: {
+          processOne: 'POST /api/order-processing/process/:orderId',
+          processBatch: 'POST /api/order-processing/process-batch',
+          pending: 'GET /api/order-processing/pending',
         },
       },
       documentation: 'Ver colección de Postman para ejemplos completos',

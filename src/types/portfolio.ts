@@ -35,7 +35,11 @@ export interface Position {
 }
 
 export interface CashCalculationResult {
-  cashBalance: number;
+  cashBalance: {
+    total: number;
+    available: number;
+    reserved: number;
+  };
   purchases: any[];
   sales: any[];
 }

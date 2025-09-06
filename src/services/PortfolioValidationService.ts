@@ -20,12 +20,14 @@ export class PortfolioValidationService {
   ): Promise<boolean> {
     try {
       const portfolio = await this.portfolioService.getPortfolio(userId);
-      const hasEnoughCash = portfolio.cashBalance >= requiredAmount;
+      const hasEnoughCash = portfolio.cashBalance.available >= requiredAmount;
 
       Logger.portfolio('Cash availability checked', {
         userId,
         requiredAmount,
-        availableCash: portfolio.cashBalance,
+        availableCash: portfolio.cashBalance.available,
+        totalCash: portfolio.cashBalance.total,
+        reservedCash: portfolio.cashBalance.reserved,
         hasEnoughCash,
       });
 
@@ -49,19 +51,22 @@ export class PortfolioValidationService {
     requiredShares: number
   ): Promise<boolean> {
     try {
+      // No es el metodo más eficiente, pero reutiliza lógica existente
       const portfolio = await this.portfolioService.getPortfolio(userId);
       const position = portfolio.positions.find(
         p => p.instrumentId === instrumentId
       );
       const hasEnoughShares = position
-        ? position.quantity >= requiredShares
+        ? position.quantity.available >= requiredShares
         : false;
 
       Logger.portfolio('Shares availability checked', {
         userId,
         instrumentId,
         requiredShares,
-        availableShares: position?.quantity ?? 0,
+        availableShares: position?.quantity.available ?? 0,
+        totalShares: position?.quantity.total ?? 0,
+        reservedShares: position?.quantity.reserved ?? 0,
         hasEnoughShares,
       });
 

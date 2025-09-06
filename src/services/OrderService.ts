@@ -3,7 +3,6 @@
  */
 
 // TODO: Implementar path aliases correctamente para imports más limpios
-import { AppDataSource } from '../data-source/index';
 import { Order, OrderStatus } from '../entities/Order';
 import { Logger } from '../utils/logger';
 import { CreateOrderDto, OrderSideDto, OrderTypeDto } from '../dto/index';
@@ -11,9 +10,10 @@ import { OrderResponseDto } from '../dto/responses';
 import { PortfolioValidationService } from './PortfolioValidationService';
 import { AppError, ValidationError } from '../middlewares/errorHandler';
 import { InstrumentService } from './InstrumentService';
+import { OrderRepository } from '../repositories/OrderRepository';
 
 export class OrderService {
-  private orderRepository = AppDataSource.getRepository(Order);
+  private orderRepository = new OrderRepository();
   private portfolioValidationService = new PortfolioValidationService();
   private instrumentService = new InstrumentService();
 
@@ -35,7 +35,7 @@ export class OrderService {
     // 1. Validaciones básicas
     await this.validateOrder(orderDto);
 
-    // 2. Obtener precio actual para MARKET orders o validar LIMIT price
+    // 2. Obtener precio actual para MARKET orders
     const currentPrice =
       await this.instrumentService.getCurrentPrice(instrumentId);
     if (!currentPrice) {
@@ -51,8 +51,8 @@ export class OrderService {
       throw new ValidationError('Invalid order size calculated');
     }
 
-    // 4. Validar fondos/posiciones disponibles
-    await this.validateOrderFunds(
+    // 4. Validar fondos/acciones
+    const hasValidFunds = await this.checkFundsAndShares(
       userId,
       instrumentId,
       side,
@@ -60,46 +60,133 @@ export class OrderService {
       executionPrice
     );
 
-    // 5. Crear orden en base de datos
-    const order = this.orderRepository.create({
-      instrumentId: instrumentId,
-      userId: userId,
+    // 5. Determinar status según validación
+    const orderStatus = hasValidFunds ? OrderStatus.NEW : OrderStatus.REJECTED;
+
+    // 6. Crear orden con el status correcto
+    const savedOrder = await this.orderRepository.create({
+      instrumentId,
+      userId,
       side,
       size: executionSize,
       price: executionPrice,
       type,
-      status: OrderStatus.NEW,
+      status: orderStatus,
       datetime: new Date(),
     });
 
-    const savedOrder = await this.orderRepository.save(order);
-
-    // 6. Procesar orden (para efectos del challenge, todas se ejecutan inmediatamente)
-    await this.processOrder(savedOrder.id);
-
-    // 7. Retornar orden actualizada
-    const processedOrder = await this.getOrderById(savedOrder.id);
-    if (!processedOrder) {
-      throw new AppError('Failed to retrieve processed order', 500);
-    }
-
-    Logger.order('Order created and processed successfully', {
-      orderId: processedOrder.id,
-      status: processedOrder.status,
-      executionPrice: processedOrder.price,
+    Logger.order('Order created', {
+      orderId: savedOrder.id,
+      status: orderStatus,
+      hasValidFunds,
     });
 
-    return processedOrder;
+    // 7. Si fue rechazada, devolver inmediatamente
+    if (orderStatus === OrderStatus.REJECTED) {
+      return this.mapOrderToResponse(savedOrder);
+    }
+
+    // 8. Procesar orden válida según tipo
+    if (type === OrderTypeDto.MARKET) {
+      await this.processOrder(savedOrder.id);
+      const processedOrder = await this.getOrderById(savedOrder.id);
+      if (!processedOrder) {
+        throw new AppError('Failed to retrieve processed order', 500);
+      }
+      return processedOrder;
+    } else {
+      return this.mapOrderToResponse(savedOrder);
+    }
+  }
+
+  /**
+   * Verificar si el usuario tiene fondos/acciones suficientes
+   * @returns true si tiene suficientes, false si no
+   */
+  private async checkFundsAndShares(
+    userId: number,
+    instrumentId: number,
+    side: OrderSideDto,
+    size: number,
+    price: number
+  ): Promise<boolean> {
+    try {
+      if (side === OrderSideDto.BUY) {
+        const requiredAmount = size * price;
+        return await this.portfolioValidationService.checkAvailableCash(
+          userId,
+          requiredAmount
+        );
+      } else {
+        return await this.portfolioValidationService.checkAvailableShares(
+          userId,
+          instrumentId,
+          size
+        );
+      }
+    } catch (error) {
+      Logger.error('Error checking funds/shares', error as Error);
+      return false;
+    }
+  }
+
+  /**
+   * Cancelar una orden pendiente
+   */
+  async cancelOrder(
+    orderId: number,
+    userId: number
+  ): Promise<OrderResponseDto> {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+    });
+
+    if (!order) {
+      throw new AppError('Order not found', 404);
+    }
+
+    // Verificar que la orden pertenece al usuario
+    if (order.userId !== userId) {
+      throw new AppError('Unauthorized to cancel this order', 403);
+    }
+
+    // Solo se pueden cancelar órdenes en estado NEW
+    if (order.status !== OrderStatus.NEW) {
+      throw new ValidationError(
+        `Cannot cancel order with status ${order.status}`
+      );
+    }
+
+    Logger.order('Cancelling order', {
+      orderId,
+      userId,
+      previousStatus: order.status,
+    });
+
+    // Cambiar estado a CANCELLED (libera automáticamente las reservas)
+    order.status = OrderStatus.CANCELLED;
+    await this.orderRepository.save(order);
+
+    Logger.order('Order cancelled successfully', {
+      orderId,
+      userId,
+      status: order.status,
+    });
+
+    // Retornar orden actualizada
+    const cancelledOrder = await this.getOrderById(orderId);
+    if (!cancelledOrder) {
+      throw new AppError('Failed to retrieve cancelled order', 500);
+    }
+
+    return cancelledOrder;
   }
 
   /**
    * Obtener orden por ID
    */
   async getOrderById(orderId: number): Promise<OrderResponseDto | null> {
-    const order = await this.orderRepository.findOne({
-      where: { id: orderId },
-      relations: ['instrument'],
-    });
+    const order = await this.orderRepository.findById(orderId, ['instrument']);
 
     if (!order) {
       return null;
@@ -129,12 +216,30 @@ export class OrderService {
    */
   async getUserOrders(
     userId: number,
-    limit: number = 50
+    limit: number = 50,
+    status?: string
   ): Promise<OrderResponseDto[]> {
-    Logger.order('Getting user orders', { userId, limit });
+    Logger.order('Getting user orders', { userId, limit, status });
+
+    // Construir condiciones de búsqueda
+    const whereConditions: any = { userId: userId };
+
+    // Agregar filtro de status si se proporciona
+    if (status) {
+      const normalizedStatus = status.trim().toUpperCase();
+      const validStatuses = Object.values(OrderStatus) as string[];
+
+      if (!validStatuses.includes(normalizedStatus)) {
+        throw new ValidationError(
+          `Invalid status '${status}'. Valid values are: ${validStatuses.join(', ')}`
+        );
+      }
+
+      whereConditions.status = normalizedStatus as OrderStatus;
+    }
 
     const orders = await this.orderRepository.find({
-      where: { userId: userId },
+      where: whereConditions,
       relations: ['instrument'],
       order: { datetime: 'DESC' },
       take: limit,
@@ -160,23 +265,113 @@ export class OrderService {
   }
 
   /**
-   * Procesar orden - Para el challenge, todas se ejecutan inmediatamente
+   * Procesar orden - Simula el worker de cola
+   * Este método sería llamado por un endpoint separado
    */
-  private async processOrder(orderId: number): Promise<void> {
-    const order = await this.orderRepository.findOne({
-      where: { id: orderId },
-    });
-    if (!order) {
-      throw new AppError('Order not found for processing', 404);
+  async processOrderById(orderId: number): Promise<OrderResponseDto> {
+    await this.processOrder(orderId);
+
+    const processedOrder = await this.getOrderById(orderId);
+    if (!processedOrder) {
+      throw new AppError('Failed to retrieve processed order', 500);
     }
+
+    return processedOrder;
+  }
+
+  /**
+   * Procesar múltiples órdenes pendientes - Simula procesamiento en batch
+   */
+  async processPendingOrders(limit: number = 10): Promise<OrderResponseDto[]> {
+    Logger.order('Processing pending orders', { limit });
+
+    // Obtener órdenes pendientes
+    const pendingOrders = await this.orderRepository.find({
+      where: { status: OrderStatus.NEW },
+      order: { datetime: 'ASC' }, // FIFO
+      take: limit,
+    });
+
+    const processedOrders: OrderResponseDto[] = [];
+
+    for (const order of pendingOrders) {
+      try {
+        const processed = await this.processOrderById(order.id);
+        processedOrders.push(processed);
+      } catch (error) {
+        Logger.error('Failed to process order', {
+          orderId: order.id,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+
+    Logger.order('Batch processing completed', {
+      processed: processedOrders.length,
+      total: pendingOrders.length,
+    });
+
+    return processedOrders;
+  }
+
+  /**
+   * Obtener órdenes pendientes
+   */
+  async getPendingOrders(limit: number = 50): Promise<OrderResponseDto[]> {
+    const orders = await this.orderRepository.find({
+      where: { status: OrderStatus.NEW },
+      relations: ['instrument'],
+      order: { datetime: 'ASC' },
+      take: limit,
+    });
+
+    return orders.map(order => ({
+      id: order.id,
+      instrumentId: order.instrumentId,
+      userId: order.userId,
+      side: order.side,
+      size: order.size,
+      price: order.price || 0,
+      type: order.type,
+      status: order.status,
+      datetime: order.datetime.toISOString(),
+      instrument: order.instrument
+        ? {
+            ticker: order.instrument.ticker,
+            name: order.instrument.name,
+          }
+        : undefined,
+    }));
+  }
+  private async processOrder(orderId: number): Promise<void> {
+    const order = await this.orderRepository.findByIdOrThrow(orderId);
 
     Logger.order('Processing order', { orderId, status: order.status });
 
+    // Validar que la orden esté en estado procesable
+    if (order.status !== OrderStatus.NEW) {
+      const message = `Cannot process order with status: ${order.status}. Only NEW orders can be processed.`;
+      Logger.warn('Order not processable', {
+        orderId,
+        currentStatus: order.status,
+      });
+      throw new AppError(message, 400);
+    }
+
     try {
+      // Validar fondos/posiciones AL MOMENTO DEL PROCESAMIENTO
+      await this.validateOrderFundsAtProcessing(
+        order.userId,
+        order.instrumentId,
+        order.side as OrderSideDto,
+        order.size,
+        order.price || 0
+      );
+
       // En un sistema real, aquí habría lógica compleja de matching
       // Para el challenge, ejecutamos todas las órdenes inmediatamente
       order.status = OrderStatus.FILLED;
-      await this.orderRepository.save(order);
+      await this.orderRepository.update(order);
 
       Logger.order('Order filled successfully', {
         orderId,
@@ -186,8 +381,61 @@ export class OrderService {
     } catch (error) {
       Logger.error('Error processing order', error as Error);
       order.status = OrderStatus.REJECTED;
-      await this.orderRepository.save(order);
+      await this.orderRepository.update(order);
+
+      // Re-lanzar el error para que el caller lo maneje
       throw error;
+    }
+  }
+
+  /**
+   * Validar fondos disponibles usando PortfolioValidationService
+   * Reemplaza la lógica anterior con queries directas por el sistema de portfolio optimizado
+   */
+  private async validateFundsWithReserves(
+    userId: number,
+    instrumentId: number,
+    side: OrderSideDto,
+    size: number,
+    price: number
+  ): Promise<void> {
+    if (side === OrderSideDto.BUY) {
+      // Para BUY: validar cash disponible (ya considera reservas)
+      const requiredAmount = size * price;
+      const hasEnoughCash =
+        await this.portfolioValidationService.checkAvailableCash(
+          userId,
+          requiredAmount
+        );
+
+      if (!hasEnoughCash) {
+        throw new ValidationError('Insufficient available cash balance');
+      }
+
+      Logger.order('Cash validation passed', {
+        userId,
+        requiredAmount,
+        side: 'BUY',
+      });
+    } else {
+      // Para SELL: validar acciones disponibles (ya considera reservas)
+      const hasEnoughShares =
+        await this.portfolioValidationService.checkAvailableShares(
+          userId,
+          instrumentId,
+          size
+        );
+
+      if (!hasEnoughShares) {
+        throw new ValidationError('Insufficient available shares');
+      }
+
+      Logger.order('Shares validation passed', {
+        userId,
+        instrumentId,
+        requiredShares: size,
+        side: 'SELL',
+      });
     }
   }
 
@@ -221,6 +469,61 @@ export class OrderService {
 
     if (amount && amount <= 0) {
       throw new ValidationError('Amount must be greater than 0');
+    }
+  }
+
+  /**
+   * Validar fondos disponibles AL MOMENTO DEL PROCESAMIENTO
+   * Esta validación considera el estado ACTUAL del portfolio
+   */
+  private async validateOrderFundsAtProcessing(
+    userId: number,
+    instrumentId: number,
+    side: OrderSideDto,
+    size: number,
+    price: number
+  ): Promise<void> {
+    if (side === OrderSideDto.BUY) {
+      // Validar cash disponible para compra
+      const requiredAmount = size * price;
+      const hasCash = await this.portfolioValidationService.checkAvailableCash(
+        userId,
+        requiredAmount
+      );
+
+      if (!hasCash) {
+        throw new ValidationError(
+          'Insufficient cash balance for purchase at processing time'
+        );
+      }
+
+      Logger.order('Cash validation passed at processing', {
+        userId,
+        requiredAmount,
+        side: 'BUY',
+      });
+    } else {
+      // SELL
+      // Validar acciones disponibles para venta
+      const hasShares =
+        await this.portfolioValidationService.checkAvailableShares(
+          userId,
+          instrumentId,
+          size
+        );
+
+      if (!hasShares) {
+        throw new ValidationError(
+          'Insufficient shares for sale at processing time'
+        );
+      }
+
+      Logger.order('Shares validation passed at processing', {
+        userId,
+        instrumentId,
+        requiredShares: size,
+        side: 'SELL',
+      });
     }
   }
 
@@ -272,5 +575,22 @@ export class OrderService {
         side: 'SELL',
       });
     }
+  }
+
+  /**
+   * Mapear entidad Order a DTO de respuesta
+   */
+  private mapOrderToResponse(order: Order): OrderResponseDto {
+    return {
+      id: order.id,
+      instrumentId: order.instrumentId,
+      userId: order.userId,
+      side: order.side,
+      size: order.size,
+      price: order.price || 0,
+      type: order.type,
+      status: order.status,
+      datetime: order.datetime.toISOString(),
+    };
   }
 }

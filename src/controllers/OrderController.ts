@@ -80,9 +80,19 @@ export class OrderController {
         throw new AppError('Limit must be between 1 and 200', 400);
       }
 
-      Logger.order('Getting user orders', { userId, limit });
+      const statusParam = req.query.status as string;
 
-      const orders = await this.orderService.getUserOrders(userId, limit);
+      Logger.order('Getting user orders', {
+        userId,
+        limit,
+        status: statusParam,
+      });
+
+      const orders = await this.orderService.getUserOrders(
+        userId,
+        limit,
+        statusParam
+      );
 
       Logger.order('User orders retrieved successfully', {
         userId,
@@ -141,6 +151,66 @@ export class OrderController {
       });
     } catch (error) {
       Logger.error('Error getting order', error as Error);
+      next(error);
+    }
+  };
+
+  /**
+   * PUT /api/orders/:orderId/cancel
+   * Cancelar una orden existente
+   * Solo se pueden cancelar órdenes con estado NEW
+   * Requiere userId en el body para validar ownership
+   */
+  cancelOrder = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const orderIdParam = req.params.orderId;
+      const { userId } = req.body;
+
+      if (!orderIdParam) {
+        throw new AppError('Order ID is required', 400);
+      }
+
+      if (!userId) {
+        throw new AppError('User ID is required in request body', 400);
+      }
+
+      const orderId = parseInt(orderIdParam, 10);
+      const userIdNum = parseInt(userId, 10);
+
+      if (isNaN(orderId) || orderId <= 0) {
+        throw new AppError('Invalid order ID provided', 400);
+      }
+
+      if (isNaN(userIdNum) || userIdNum <= 0) {
+        throw new AppError('Invalid user ID provided', 400);
+      }
+
+      Logger.order('Cancelling order', { orderId, userId: userIdNum });
+
+      const cancelledOrder = await this.orderService.cancelOrder(
+        orderId,
+        userIdNum
+      );
+
+      Logger.order('Order cancelled successfully', {
+        orderId: cancelledOrder.id,
+        userId: userIdNum,
+        previousStatus: 'NEW',
+        currentStatus: cancelledOrder.status,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: cancelledOrder,
+        timestamp: new Date().toISOString(),
+        message: 'Order cancelled successfully',
+      });
+    } catch (error) {
+      Logger.error('Error cancelling order', error as Error);
       next(error);
     }
   };

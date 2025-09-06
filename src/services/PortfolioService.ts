@@ -8,11 +8,9 @@ import { MarketDataRepository } from '../repositories/MarketDataRepository';
 import { CashCalculator } from './CashCalculator';
 import { PositionCalculator } from './PositionCalculator';
 import { IPortfolioService } from '../types/interfaces';
-import { PortfolioResponseDto, PositionDto } from '../dto/responses';
-import { Position } from '../types/portfolio';
-import { Order } from '../entities/Order';
+import { PortfolioResponseDto } from '../dto/responses';
 import { Logger } from '../utils/logger';
-import { formatCurrency } from '../utils/financial';
+import { OrderSide } from '../entities/Order';
 
 export class PortfolioService implements IPortfolioService {
   private userRepository = new UserRepository();
@@ -22,24 +20,30 @@ export class PortfolioService implements IPortfolioService {
   private positionCalculator = new PositionCalculator();
 
   async getPortfolio(userId: number): Promise<PortfolioResponseDto> {
-    Logger.portfolio('Calculating portfolio', { userId });
+    Logger.portfolio('Getting portfolio', { userId });
 
     // 1. Verificar que el usuario existe
     const user = await this.userRepository.findByIdOrThrow(userId);
 
-    // 2. Obtener órdenes ejecutadas del usuario
-    const filledOrders =
-      await this.orderRepository.getFilledOrdersByUserId(userId);
+    // 2. Obtener todas las órdenes relevantes (FILLED + NEW)
+    const allOrders = await this.orderRepository.getAllUserOrders(userId);
 
-    // 3. Calcular cash balance
-    const { cashBalance } =
-      this.cashCalculator.calculateCashBalance(filledOrders);
+    // 3. Calcular cash balance con desglose completo (total, available, reserved)
+    const cashResult = this.cashCalculator.calculateCashBalance(allOrders);
 
-    // 4. Obtener órdenes de trading y precios actuales para las posiciones
-    // Solo necesitamos órdenes de trading (BUY/SELL), no CASH_IN/CASH_OUT
-    const tradingOrders = this.extractTradingOrders(filledOrders);
+    // 4. Obtener instrumentos únicos de órdenes de trading (solo para market data)
+    const instrumentIds = [
+      ...new Set(
+        allOrders
+          .filter(
+            order =>
+              order.side === OrderSide.BUY || order.side === OrderSide.SELL
+          )
+          .map(order => order.instrumentId)
+      ),
+    ];
 
-    const instrumentIds = this.getUniqueInstrumentIds(tradingOrders);
+    // 5. Obtener precios de mercado para todos los instrumentos
     const marketData =
       await this.marketDataRepository.getCurrentMarketDataByInstruments(
         instrumentIds
@@ -48,68 +52,34 @@ export class PortfolioService implements IPortfolioService {
       marketData.map(data => [data.instrumentId, data.currentPrice])
     );
 
-    // 5. Calcular posiciones
+    // 6. Calcular posiciones con desglose de reservas
     const positions = this.positionCalculator.calculatePositions(
-      tradingOrders,
+      allOrders,
       marketPrices
     );
 
-    // 6. Convertir a DTOs (sin recálculos redundantes)
-    const positionDtos = this.buildPositionDtos(positions);
-
-    // 7. Calcular valor total del portfolio (usar marketValue ya calculado)
-    const totalMarketValue = positions.reduce(
-      (sum, pos) => sum + pos.marketValue,
+    // 7. Calcular valor total del portfolio
+    const positionsValue = positions.reduce(
+      (total, position) => total + position.marketValue,
       0
     );
-    const totalValue = cashBalance + totalMarketValue;
+    const totalValue = cashResult.cashBalance.total + positionsValue;
 
     Logger.portfolio('Portfolio calculated successfully', {
       userId,
       totalValue,
-      cashBalance,
-      positionsCount: positionDtos.length,
+      cashTotal: cashResult.cashBalance.total,
+      cashAvailable: cashResult.cashBalance.available,
+      cashReserved: cashResult.cashBalance.reserved,
+      positionsCount: positions.length,
     });
 
     return {
       userId: user.id,
       accountNumber: user.accountNumber,
-      totalValue: formatCurrency(totalValue),
-      cashBalance: formatCurrency(cashBalance),
-      positions: positionDtos,
+      totalValue,
+      cashBalance: cashResult.cashBalance,
+      positions,
     };
-  }
-
-  /**
-   * Convertir posiciones a DTOs sin recálculos redundantes
-   * Los valores ya vienen calculados desde PositionCalculator
-   */
-  private buildPositionDtos(positions: Position[]): PositionDto[] {
-    return positions.map(position => ({
-      instrumentId: position.instrumentId,
-      ticker: position.ticker,
-      name: position.name,
-      quantity: position.quantity,
-      currentPrice: formatCurrency(position.marketValue / position.quantity),
-      marketValue: formatCurrency(position.marketValue),
-      totalReturnPercent: formatCurrency(position.totalReturnPercent),
-    }));
-  }
-
-  /**
-   * Extraer órdenes de trading (BUY/SELL)
-   * Excluye CASH_IN/CASH_OUT que no afectan posiciones de instrumentos
-   */
-  private extractTradingOrders(filledOrders: Order[]): Order[] {
-    return filledOrders.filter(
-      order => order.side === 'BUY' || order.side === 'SELL'
-    );
-  }
-
-  /**
-   * Obtener IDs únicos de instrumentos desde órdenes de trading
-   */
-  private getUniqueInstrumentIds(tradingOrders: Order[]): number[] {
-    return [...new Set(tradingOrders.map(order => order.instrumentId))];
   }
 }
