@@ -42,26 +42,6 @@ export class OrderRepository implements IOrderRepository {
   }
 
   /**
-   * Obtener órdenes ejecutadas de un usuario con instrumentos
-   * @deprecated Usar getAllUserOrders() para portfolio calculations
-   */
-  async findByUserId(userId: number): Promise<Order[]> {
-    try {
-      return await this.repository.find({
-        where: {
-          userId: userId,
-          status: OrderStatus.FILLED,
-        },
-        relations: ['instrument'],
-        order: { datetime: 'ASC' },
-      });
-    } catch (error) {
-      Logger.error('Error getting filled orders', error as Error);
-      return [];
-    }
-  }
-
-  /**
    * Buscar orden por ID (puede devolver null)
    */
   async findById(orderId: number, relations?: string[]): Promise<Order | null> {
@@ -78,7 +58,7 @@ export class OrderRepository implements IOrderRepository {
   /**
    * Crear nueva orden (create + save)
    */
-  async create(orderData: Partial<Order>): Promise<Order> {
+  async createAndSave(orderData: Partial<Order>): Promise<Order> {
     Logger.query('Creating new order', {
       userId: orderData.userId,
       instrumentId: orderData.instrumentId,

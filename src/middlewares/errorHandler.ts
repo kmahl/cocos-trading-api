@@ -34,24 +34,6 @@ export class NotFoundError extends AppError {
   }
 }
 
-export class UnauthorizedError extends AppError {
-  constructor(message: string = 'Unauthorized') {
-    super(message, 401);
-  }
-}
-
-export class InsufficientFundsError extends AppError {
-  constructor(message: string = 'Insufficient funds') {
-    super(message, 400);
-  }
-}
-
-export class InvalidOrderError extends AppError {
-  constructor(message: string) {
-    super(message, 400);
-  }
-}
-
 // Error handler global
 export const globalErrorHandler = (
   error: Error | AppError,

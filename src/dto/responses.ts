@@ -97,10 +97,3 @@ export interface ApiErrorResponseDto {
   path: string;
   details?: Record<string, unknown>;
 }
-
-export interface ApiSuccessResponseDto<T = Record<string, unknown>> {
-  success: boolean;
-  data: T;
-  timestamp: string;
-  message?: string;
-}

@@ -2,7 +2,7 @@
  * Service responsible for order calculations and price determination
  */
 
-import { OrderTypeDto } from '../dto/index';
+import { OrderType } from '../entities/index';
 import { ValidationError } from '../middlewares/errorHandler';
 
 interface OrderCalculation {
@@ -12,7 +12,7 @@ interface OrderCalculation {
 
 export class OrderCalculationService {
   calculateOrderExecution(
-    type: OrderTypeDto,
+    type: OrderType,
     currentPrice: number,
     size?: number,
     amount?: number,
@@ -29,15 +29,15 @@ export class OrderCalculationService {
   }
 
   private determineExecutionPrice(
-    type: OrderTypeDto,
+    type: OrderType,
     currentPrice: number,
     limitPrice?: number
   ): number {
-    if (type === OrderTypeDto.MARKET) {
+    if (type === OrderType.MARKET) {
       return currentPrice;
     }
 
-    if (type === OrderTypeDto.LIMIT && limitPrice) {
+    if (type === OrderType.LIMIT && limitPrice) {
       return limitPrice;
     }
 

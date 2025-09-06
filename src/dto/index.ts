@@ -11,6 +11,7 @@ import {
   ValidationArguments,
 } from 'class-validator';
 import { Transform, Expose } from 'class-transformer';
+import { OrderSide, OrderType } from '../entities/Order';
 
 // Custom validator para asegurar que se envíe size O amount, pero no ambos
 function IsEitherSizeOrAmount(validationOptions?: ValidationOptions) {
@@ -40,19 +41,6 @@ function IsEitherSizeOrAmount(validationOptions?: ValidationOptions) {
 // Re-export responses
 export * from './responses';
 
-// Enums para validación
-export enum OrderSideDto {
-  BUY = 'BUY',
-  SELL = 'SELL',
-  CASH_IN = 'CASH_IN',
-  CASH_OUT = 'CASH_OUT',
-}
-
-export enum OrderTypeDto {
-  MARKET = 'MARKET',
-  LIMIT = 'LIMIT',
-}
-
 // DTO para crear órdenes
 // Soporta dos modalidades:
 // 1. size: Cantidad exacta de acciones (entero)
@@ -72,10 +60,10 @@ export class CreateOrderDto {
 
   @Expose()
   @IsNotEmpty({ message: 'Order side is required' })
-  @IsEnum(OrderSideDto, {
+  @IsEnum(OrderSide, {
     message: 'Side must be BUY, SELL, CASH_IN, or CASH_OUT',
   })
-  side!: OrderSideDto;
+  side!: OrderSide;
 
   // Modalidad 1: Cantidad exacta de acciones
   @Expose()
@@ -100,8 +88,8 @@ export class CreateOrderDto {
 
   @Expose()
   @IsNotEmpty({ message: 'Order type is required' })
-  @IsEnum(OrderTypeDto, { message: 'Type must be MARKET or LIMIT' })
-  type!: OrderTypeDto;
+  @IsEnum(OrderType, { message: 'Type must be MARKET or LIMIT' })
+  type!: OrderType;
 }
 
 // DTO para búsqueda de instrumentos

@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 // TODO: Implementar path aliases correctamente para imports más limpios
 import { OrderService } from '../services/OrderService';
-import { CreateOrderDto, OrderSideDto } from '../dto/index';
+import { CreateOrderDto } from '../dto/index';
+import { OrderSide } from '../entities/index';
 import { Logger } from '../utils/logger';
 import { AppError } from '../middlewares/errorHandler';
 
@@ -29,10 +30,7 @@ export class OrderController {
       }
 
       // Validación: solo permitir BUY/SELL en endpoint de orders
-      if (
-        orderDto.side !== OrderSideDto.BUY &&
-        orderDto.side !== OrderSideDto.SELL
-      ) {
+      if (orderDto.side !== OrderSide.BUY && orderDto.side !== OrderSide.SELL) {
         throw new AppError(
           'Orders endpoint only accepts BUY and SELL orders. Use /api/cash/ endpoints for cash operations.',
           400
@@ -248,10 +246,10 @@ export class OrderController {
   /**
    * Helper para generar mensaje de rechazo basado en el side de la orden
    */
-  private getRejectReasonFromSide(side: OrderSideDto): string {
-    if (side === OrderSideDto.BUY) {
+  private getRejectReasonFromSide(side: OrderSide): string {
+    if (side === OrderSide.BUY) {
       return 'Insufficient cash balance to complete purchase';
-    } else if (side === OrderSideDto.SELL) {
+    } else if (side === OrderSide.SELL) {
       return 'Insufficient shares available to sell';
     }
     return 'Order validation failed';

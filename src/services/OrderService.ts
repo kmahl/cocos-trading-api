@@ -2,9 +2,9 @@
  * Order Service - Orchestrates order creation and management
  */
 
-import { Order, OrderStatus } from '../entities/Order';
+import { Order, OrderStatus, OrderSide, OrderType } from '../entities/Order';
 import { Logger } from '../utils/logger';
-import { CreateOrderDto, OrderSideDto, OrderTypeDto } from '../dto/index';
+import { CreateOrderDto } from '../dto/index';
 import { OrderResponseDto } from '../dto/responses';
 import { PortfolioValidationService } from './PortfolioValidationService';
 import { AppError, ValidationError } from '../middlewares/errorHandler';
@@ -103,7 +103,7 @@ export class OrderService {
       executionPrice
     );
 
-    const savedOrder = await this.orderRepository.create({
+    const savedOrder = await this.orderRepository.createAndSave({
       instrumentId,
       userId,
       side,
@@ -123,7 +123,7 @@ export class OrderService {
       return this.mapOrderToResponse(savedOrder);
     }
 
-    if (type === OrderTypeDto.MARKET) {
+    if (type === OrderType.MARKET) {
       await this.executionService.executeOrder(savedOrder.id);
       const processedOrder = await this.getOrderById(savedOrder.id);
       if (!processedOrder) {
@@ -358,11 +358,11 @@ export class OrderService {
   private async validateFundsWithReserves(
     userId: number,
     instrumentId: number,
-    side: OrderSideDto,
+    side: OrderSide,
     size: number,
     price: number
   ): Promise<void> {
-    if (side === OrderSideDto.BUY) {
+    if (side === OrderSide.BUY) {
       // Para BUY: validar cash disponible (ya considera reservas)
       const requiredAmount = size * price;
       const hasEnoughCash =
@@ -416,12 +416,12 @@ export class OrderService {
     }
 
     // Validar que LIMIT orders tengan precio
-    if (type === OrderTypeDto.LIMIT && (!price || price <= 0)) {
+    if (type === OrderType.LIMIT && (!price || price <= 0)) {
       throw new ValidationError('LIMIT orders must have a valid price');
     }
 
     // Validar que MARKET orders no tengan precio (EXCEPTO para moneda que siempre es 1)
-    if (type === OrderTypeDto.MARKET && price && instrument.type !== 'MONEDA') {
+    if (type === OrderType.MARKET && price && instrument.type !== 'MONEDA') {
       throw new ValidationError('MARKET orders should not specify a price');
     }
 
@@ -442,11 +442,11 @@ export class OrderService {
   private async validateOrderFundsAtProcessing(
     userId: number,
     instrumentId: number,
-    side: OrderSideDto,
+    side: OrderSide,
     size: number,
     price: number
   ): Promise<void> {
-    if (side === OrderSideDto.BUY) {
+    if (side === OrderSide.BUY) {
       // Validar cash disponible para compra
       const requiredAmount = size * price;
       const hasCash = await this.portfolioValidationService.checkAvailableCash(
@@ -496,11 +496,11 @@ export class OrderService {
   private async validateOrderFunds(
     userId: number,
     instrumentId: number,
-    side: OrderSideDto,
+    side: OrderSide,
     size: number,
     price: number
   ): Promise<void> {
-    if (side === OrderSideDto.BUY) {
+    if (side === OrderSide.BUY) {
       // Validar cash disponible para compra
       const requiredAmount = size * price;
       const hasCash = await this.portfolioValidationService.checkAvailableCash(

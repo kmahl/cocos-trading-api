@@ -2,7 +2,8 @@
  * Order Validator Service
  */
 
-import { CreateOrderDto, OrderTypeDto } from '../dto/index';
+import { CreateOrderDto } from '../dto/index';
+import { OrderType } from '../entities/index';
 import { IOrderValidator, ValidationResult } from '../types/interfaces';
 import { PortfolioValidationService } from './PortfolioValidationService';
 import { Logger } from '../utils/logger';
@@ -28,14 +29,14 @@ export class OrderValidator implements IOrderValidator {
 
     // Validar LIMIT orders tengan precio
     if (
-      orderDto.type === OrderTypeDto.LIMIT &&
+      orderDto.type === OrderType.LIMIT &&
       (!orderDto.price || orderDto.price <= 0)
     ) {
       errors.push('LIMIT orders must have a valid price');
     }
 
     // Validar MARKET orders no tengan precio
-    if (orderDto.type === OrderTypeDto.MARKET && orderDto.price) {
+    if (orderDto.type === OrderType.MARKET && orderDto.price) {
       errors.push('MARKET orders should not specify a price');
     }
 

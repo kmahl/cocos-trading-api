@@ -21,30 +21,6 @@ export class MarketDataRepository implements IMarketDataRepository {
   }
 
   /**
-   * Obtener datos de mercado más recientes para un instrumento específico
-   */
-  async getLatestByInstrument(
-    instrumentId: number
-  ): Promise<MarketData | null> {
-    try {
-      const marketData = await this.repository
-        .createQueryBuilder('md')
-        .where('md.instrumentid = :instrumentId', { instrumentId })
-        .orderBy('md.date', 'DESC')
-        .limit(1)
-        .getOne();
-
-      return marketData;
-    } catch (error) {
-      Logger.error(
-        'Error getting latest market data for instrument',
-        error as Error
-      );
-      return null;
-    }
-  }
-
-  /**
    * Obtener datos de mercado actuales para múltiples instrumentos
    * Query optimizada: Solo campos necesarios (close, previousClose) más recientes
    */

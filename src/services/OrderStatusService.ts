@@ -2,8 +2,7 @@
  * Service responsible for order status determination
  */
 
-import { OrderStatus } from '../entities/Order';
-import { OrderSideDto } from '../dto/index';
+import { OrderStatus, OrderSide } from '../entities/Order';
 import { PortfolioValidationService } from './PortfolioValidationService';
 import { Logger } from '../utils/logger';
 
@@ -13,7 +12,7 @@ export class OrderStatusService {
   async determineInitialStatus(
     userId: number,
     instrumentId: number,
-    side: OrderSideDto,
+    side: OrderSide,
     size: number,
     price: number
   ): Promise<OrderStatus> {
@@ -36,7 +35,7 @@ export class OrderStatusService {
   private async validateFundsAndShares(
     userId: number,
     instrumentId: number,
-    side: OrderSideDto,
+    side: OrderSide,
     size: number,
     price: number
   ): Promise<boolean> {

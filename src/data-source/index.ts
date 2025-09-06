@@ -9,10 +9,10 @@ export const AppDataSource = new DataSource({
   username: config.username,
   password: config.password,
   database: config.database,
-  synchronize: false, // En producción siempre false
+  synchronize: false,
   // Logging configurado específicamente
-  logging: false, // Cambiar a 'all', ['query'], o false según necesites
-  logger: 'simple-console', // Formato limpio de logs
+  logging: false,
+  logger: 'simple-console',
   entities: [User, Instrument, Order, MarketData],
   migrations: [],
   subscribers: [],

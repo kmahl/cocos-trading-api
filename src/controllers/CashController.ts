@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { OrderService } from '../services/OrderService';
 import { PortfolioService } from '../services/PortfolioService';
-import { CreateOrderDto, OrderSideDto, OrderTypeDto } from '../dto';
+import { CreateOrderDto } from '../dto';
+import { OrderSide, OrderType } from '../entities';
 import { Logger } from '../utils/logger';
 import { AppError } from '../middlewares/errorHandler';
 
@@ -54,9 +55,9 @@ export class CashController {
       const orderDto: CreateOrderDto = {
         instrumentId: this.ARS_INSTRUMENT_ID,
         userId,
-        side: OrderSideDto.CASH_IN,
+        side: OrderSide.CASH_IN,
         size: amount, // Para cash, size = amount
-        type: OrderTypeDto.MARKET,
+        type: OrderType.MARKET,
         price: 1, // Cash siempre vale 1 peso por peso
       };
 
@@ -125,9 +126,9 @@ export class CashController {
       const orderDto: CreateOrderDto = {
         instrumentId: this.ARS_INSTRUMENT_ID,
         userId,
-        side: OrderSideDto.CASH_OUT,
+        side: OrderSide.CASH_OUT,
         size: amount, // Para cash, size = amount
-        type: OrderTypeDto.MARKET,
+        type: OrderType.MARKET,
         price: 1, // Cash siempre vale 1 peso por peso
       };
 
