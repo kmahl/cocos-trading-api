@@ -1,0 +1,1528 @@
+{
+	"info": {
+		"_postman_id": "12345678-1234-5678-9012-123456789012",
+		"name": "Cocos Trading API - Updated",
+		"description": "API REST para sistema de trading - Challenge Backend Cocos\n\n## Endpoints disponibles:\n- Portfolio de usuarios\n- Búsqueda de instrumentos (con filtros case insensitive y por tipo)\n- Market data con filtros avanzados (tipo, rangos de fecha, límites)\n- Creación y consulta de órdenes\n- Cancelación de órdenes\n- Procesamiento de cola de órdenes\n- Operaciones de efectivo (depósitos y retiros)\n- Health check\n\n## Variables:\n- `baseUrl`: http://localhost:3000/api\n- `userId`: 1 (usuario de prueba)\n- `instrumentId`: 4 (MOLA - instrumento con market data)\n- `instrumentIdNoData`: 1 (DYCA - instrumento sin market data)\n- `limitOrderId`: ID de orden LIMIT para tests (actualizar manualmente)\n- `filledOrderId`: ID de orden FILLED para tests (actualizar manualmente)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "Get Health Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Verificar que el servicio esté funcionando correctamente"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de monitoreo y health check"
+		},
+		{
+			"name": "Portfolio",
+			"item": [
+				{
+					"name": "Get User Portfolio",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/portfolio/{{userId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"portfolio",
+								"{{userId}}"
+							]
+						},
+						"description": "Obtener el portfolio completo de un usuario incluyendo:\n- Valor total del portfolio\n- Cash disponible\n- Posiciones activas\n- Performance"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints relacionados con portfolios de usuarios"
+		},
+		{
+			"name": "Cash Operations",
+			"item": [
+				{
+					"name": "Deposit Cash",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1,\n  \"amount\": 50000\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cash/deposit",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cash",
+								"deposit"
+							]
+						},
+						"description": "Depositar efectivo en la cuenta del usuario. El monto se agrega inmediatamente al cash disponible."
+					},
+					"response": []
+				},
+				{
+					"name": "Withdraw Cash",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1,\n  \"amount\": 25000\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cash/withdraw",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cash",
+								"withdraw"
+							]
+						},
+						"description": "Retirar efectivo de la cuenta del usuario. Valida que tenga fondos suficientes antes de procesar."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Available Cash Balance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cash/balance/{{userId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cash",
+								"balance",
+								"{{userId}}"
+							]
+						},
+						"description": "Obtener el balance de efectivo disponible para un usuario específico."
+					},
+					"response": []
+				},
+				{
+					"name": "Withdraw Cash - Insufficient Funds",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1,\n  \"amount\": 999999999\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cash/withdraw",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cash",
+								"withdraw"
+							]
+						},
+						"description": "Probar retiro con monto mayor al disponible. Debería fallar con error de fondos insuficientes."
+					},
+					"response": []
+				},
+				{
+					"name": "Cash Operations - Invalid User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 999999,\n  \"amount\": 10000\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cash/deposit",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cash",
+								"deposit"
+							]
+						},
+						"description": "Probar operación de cash con usuario inexistente. Debería fallar con error 400."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para operaciones de efectivo (depósitos y retiros)"
+		},
+		{
+			"name": "Instruments",
+			"item": [
+				{
+					"name": "Search Instruments - Basic",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/search?q=dyca",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "dyca",
+									"description": "Término de búsqueda (ticker o nombre) - case insensitive"
+								}
+							]
+						},
+						"description": "Búsqueda básica por ticker (case insensitive). Debería encontrar DYCA aunque se busque en minúsculas."
+					},
+					"response": []
+				},
+				{
+					"name": "Search Instruments - By Type (ACCIONES)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/search?q=acciones&limit=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "acciones",
+									"description": "Buscar por tipo de instrumento"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Limitar resultados"
+								}
+							]
+						},
+						"description": "Buscar todos los instrumentos de tipo ACCIONES. Debería traer todos menos el instrumento 66 (ARS PESOS)."
+					},
+					"response": []
+				},
+				{
+					"name": "Search Instruments - Case Sensitive Test",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/search?q=MOLINOS&limit=5",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "MOLINOS",
+									"description": "Búsqueda en mayúsculas"
+								},
+								{
+									"key": "limit",
+									"value": "5",
+									"description": "Límite de resultados"
+								}
+							]
+						},
+						"description": "Probar búsqueda case insensitive - MOLINOS en mayúsculas debería encontrar 'Molinos Agro S.A.'"
+					},
+					"response": []
+				},
+				{
+					"name": "Search Instruments - Partial Match",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/search?q=s.a&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "s.a",
+									"description": "Búsqueda parcial en nombres"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Límite de resultados"
+								}
+							]
+						},
+						"description": "Buscar empresas que contengan 'S.A.' en el nombre"
+					},
+					"response": []
+				},
+				{
+					"name": "Search Instruments - No Results",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/search?q=xyz123notfound",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "xyz123notfound",
+									"description": "Término que no debería encontrar resultados"
+								}
+							]
+						},
+						"description": "Probar respuesta cuando no hay resultados de búsqueda"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Instrument by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/{{instrumentId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"{{instrumentId}}"
+							]
+						},
+						"description": "Obtener información detallada de un instrumento específico (MOLA - ID 4)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Instrument by ID - Not Found",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/999999",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"999999"
+							]
+						},
+						"description": "Probar manejo de error 404 para instrumento inexistente"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para búsqueda y consulta de instrumentos financieros"
+		},
+		{
+			"name": "Market Data",
+			"item": [
+				{
+					"name": "Get Market Data - Basic",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/{{instrumentId}}/market-data",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"{{instrumentId}}",
+								"market-data"
+							]
+						},
+						"description": "Obtener todos los datos de mercado de MOLA (instrumento 4). Debería retornar array con datos."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Market Data - With Type Filter (ACCIONES)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/{{instrumentId}}/market-data?type=ACCIONES",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"{{instrumentId}}",
+								"market-data"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "ACCIONES",
+									"description": "Filtrar por tipo de instrumento"
+								}
+							]
+						},
+						"description": "Obtener market data filtrando por tipo ACCIONES. MOLA es tipo ACCIONES, así que debería retornar datos."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Market Data - Type Mismatch",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/{{instrumentId}}/market-data?type=MONEDA",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"{{instrumentId}}",
+								"market-data"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "MONEDA",
+									"description": "Tipo que no coincide con el instrumento"
+								}
+							]
+						},
+						"description": "Probar filtro de tipo que no coincide. MOLA es ACCIONES, no MONEDA, así que debería retornar data null con mensaje explicativo."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Market Data - With Date Range",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/{{instrumentId}}/market-data?startDate=2023-07-01&endDate=2023-07-31&limit=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"{{instrumentId}}",
+								"market-data"
+							],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2023-07-01",
+									"description": "Fecha inicio del rango (YYYY-MM-DD)"
+								},
+								{
+									"key": "endDate",
+									"value": "2023-07-31",
+									"description": "Fecha fin del rango (YYYY-MM-DD)"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Límite de registros"
+								}
+							]
+						},
+						"description": "Obtener market data para un rango de fechas específico con límite de registros."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Market Data - Start Date Only",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/{{instrumentId}}/market-data?startDate=2023-07-13&limit=5",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"{{instrumentId}}",
+								"market-data"
+							],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2023-07-13",
+									"description": "Solo fecha de inicio - desde esta fecha en adelante"
+								},
+								{
+									"key": "limit",
+									"value": "5",
+									"description": "Límite de 5 registros"
+								}
+							]
+						},
+						"description": "Obtener market data desde una fecha específica hacia adelante."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Market Data - End Date Only",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/{{instrumentId}}/market-data?endDate=2023-07-31&limit=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"{{instrumentId}}",
+								"market-data"
+							],
+							"query": [
+								{
+									"key": "endDate",
+									"value": "2023-07-31",
+									"description": "Solo fecha de fin - hasta esta fecha"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Límite de registros"
+								}
+							]
+						},
+						"description": "Obtener market data hasta una fecha específica."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Market Data - Large Limit",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/{{instrumentId}}/market-data?limit=500",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"{{instrumentId}}",
+								"market-data"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "500",
+									"description": "Límite alto para probar paginación"
+								}
+							]
+						},
+						"description": "Probar con límite alto (máximo 1000 según implementación)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Market Data - No Data Available",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/66/market-data",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"66",
+								"market-data"
+							]
+						},
+						"description": "Probar con instrumento que existe pero no tiene market data (ARS PESOS - ID 66). Debería retornar 200 con data null."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Market Data - Instrument Not Found",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/999999/market-data",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"999999",
+								"market-data"
+							]
+						},
+						"description": "Probar con instrumento inexistente. Debería retornar 404 porque el instrumento no existe."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Market Data - Invalid Date Format",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/{{instrumentId}}/market-data?startDate=invalid-date&endDate=2023-13-45",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"{{instrumentId}}",
+								"market-data"
+							],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "invalid-date",
+									"description": "Formato de fecha inválido"
+								},
+								{
+									"key": "endDate",
+									"value": "2023-13-45",
+									"description": "Fecha inválida (mes 13, día 45)"
+								}
+							]
+						},
+						"description": "Probar validación de formatos de fecha inválidos. Debería retornar error 400."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para obtener datos de mercado con filtros avanzados"
+		},
+		{
+			"name": "Orders",
+			"item": [
+				{
+					"name": "Create Market Buy Order (by amount)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1,\n  \"instrumentId\": 4,\n  \"side\": \"BUY\",\n  \"type\": \"MARKET\",\n  \"amount\": 10000\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"description": "Crear orden de compra a mercado especificando monto total en pesos.\nUsando instrumento 4 (MOLA) que tiene market data."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Market Buy Order (by size)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1,\n  \"instrumentId\": 4,\n  \"side\": \"BUY\",\n  \"type\": \"MARKET\",\n  \"size\": 50\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"description": "Crear orden de compra a mercado especificando cantidad exacta de acciones."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Limit Buy Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1,\n  \"instrumentId\": 4,\n  \"side\": \"BUY\",\n  \"type\": \"LIMIT\",\n  \"size\": 25,\n  \"price\": 7000.00\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"description": "Crear orden de compra con precio límite específico para MOLA."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Limit Sell Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1,\n  \"instrumentId\": 4,\n  \"side\": \"SELL\",\n  \"type\": \"LIMIT\",\n  \"size\": 10,\n  \"price\": 7200.00\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"description": "Crear orden LIMIT de venta. Requiere tener acciones previamente compradas."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Market Sell Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1,\n  \"instrumentId\": 4,\n  \"side\": \"SELL\",\n  \"type\": \"MARKET\",\n  \"size\": 10\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"description": "Crear orden de venta a precio de mercado.\nNOTA: Solo funciona si el usuario tiene acciones suficientes."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/orders/user/{{userId}}?limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"user",
+								"{{userId}}"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Número máximo de órdenes a retornar (1-200)"
+								}
+							]
+						},
+						"description": "Obtener historial de órdenes de un usuario específico"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Orders - Filter by Status (NEW)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/orders/user/{{userId}}?limit=10&status=NEW",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"user",
+								"{{userId}}"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Número máximo de órdenes"
+								},
+								{
+									"key": "status",
+									"value": "NEW",
+									"description": "Filtrar solo órdenes pendientes"
+								}
+							]
+						},
+						"description": "Obtener solo órdenes pendientes (estado NEW) del usuario"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Orders - Filter by Status (FILLED)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/orders/user/{{userId}}?limit=10&status=FILLED",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"user",
+								"{{userId}}"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Número máximo de órdenes"
+								},
+								{
+									"key": "status",
+									"value": "FILLED",
+									"description": "Filtrar solo órdenes ejecutadas"
+								}
+							]
+						},
+						"description": "Obtener solo órdenes ejecutadas (estado FILLED) del usuario"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Orders - Invalid Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/orders/user/{{userId}}?status=INVALID_STATUS",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"user",
+								"{{userId}}"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "INVALID_STATUS",
+									"description": "Estado inválido para probar validación"
+								}
+							]
+						},
+						"description": "Probar validación con estado inválido. Debería fallar con error 400."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/orders/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"1"
+							]
+						},
+						"description": "Obtener detalles de una orden específica por su ID"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para creación y consulta de órdenes de trading"
+		},
+		{
+			"name": "Order Cancellation",
+			"item": [
+				{
+					"name": "Cancel LIMIT Order - Success",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders/{{limitOrderId}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"{{limitOrderId}}",
+								"cancel"
+							]
+						},
+						"description": "Cancelar una orden LIMIT pendiente. Primero crear orden LIMIT y usar su ID en limitOrderId variable."
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Order - Already FILLED",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders/{{filledOrderId}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"{{filledOrderId}}",
+								"cancel"
+							]
+						},
+						"description": "Intentar cancelar orden ya ejecutada. Debería fallar con error de validación."
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Order - Wrong User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 999\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders/{{limitOrderId}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"{{limitOrderId}}",
+								"cancel"
+							]
+						},
+						"description": "Intentar cancelar orden de otro usuario. Debería fallar con error 403."
+					},
+					"response": []
+				}
+			],
+			"description": "Test cases básicos para cancelación de órdenes"
+		},
+		{
+			"name": "Error Cases",
+			"item": [
+				{
+					"name": "Invalid User ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/portfolio/999999",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"portfolio",
+								"999999"
+							]
+						},
+						"description": "Probar manejo de errores con usuario inexistente"
+					},
+					"response": []
+				},
+				{
+					"name": "Invalid Search Query - Empty",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/search?q=",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "",
+									"description": "Query vacío"
+								}
+							]
+						},
+						"description": "Probar validación con query vacío en búsqueda de instrumentos"
+					},
+					"response": []
+				},
+				{
+					"name": "Invalid Limit - Too High",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/instruments/search?q=acciones&limit=1500",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"instruments",
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "acciones",
+									"description": "Query válido"
+								},
+								{
+									"key": "limit",
+									"value": "1500",
+									"description": "Límite mayor al máximo permitido (100)"
+								}
+							]
+						},
+						"description": "Probar validación de límite mayor al máximo permitido"
+					},
+					"response": []
+				},
+				{
+					"name": "Invalid Order - Missing size and amount",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1,\n  \"instrumentId\": 4,\n  \"side\": \"BUY\",\n  \"type\": \"MARKET\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"description": "Probar validación XOR: debe enviar size O amount, pero no ninguno"
+					},
+					"response": []
+				},
+				{
+					"name": "Invalid Order - Both size and amount",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1,\n  \"instrumentId\": 4,\n  \"side\": \"BUY\",\n  \"type\": \"MARKET\",\n  \"size\": 10,\n  \"amount\": 1000\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"description": "Probar validación XOR: debe enviar size O amount, pero no ambos"
+					},
+					"response": []
+				},
+				{
+					"name": "Invalid Limit Order - Missing price",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1,\n  \"instrumentId\": 4,\n  \"side\": \"BUY\",\n  \"type\": \"LIMIT\",\n  \"size\": 10\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"description": "Probar validación: órdenes LIMIT requieren precio"
+					},
+					"response": []
+				},
+				{
+					"name": "Insufficient Funds - Should Create REJECTED Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1,\n  \"instrumentId\": 4,\n  \"side\": \"BUY\",\n  \"type\": \"LIMIT\",\n  \"size\": 1000,\n  \"price\": 7000.00\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"description": "Orden que falla por fondos insuficientes. Debería crear orden con status REJECTED en DB."
+					},
+					"response": []
+				},
+				{
+					"name": "Insufficient Shares - Should Create REJECTED Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1,\n  \"instrumentId\": 4,\n  \"side\": \"SELL\",\n  \"type\": \"MARKET\",\n  \"size\": 10000\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders"
+							]
+						},
+						"description": "Orden de venta que falla por acciones insuficientes. Debería crear orden con status REJECTED en DB."
+					},
+					"response": []
+				}
+			],
+			"description": "Casos de prueba para validaciones y manejo de errores"
+		},
+		{
+			"name": "Order Processing",
+			"item": [
+				{
+					"name": "Get Pending Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/order-processing/pending?limit=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"order-processing",
+								"pending"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Límite de órdenes pendientes a obtener"
+								}
+							]
+						},
+						"description": "Obtener lista de órdenes pendientes (status NEW) para procesamiento."
+					},
+					"response": []
+				},
+				{
+					"name": "Process Single Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/order-processing/process/{{limitOrderId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"order-processing",
+								"process",
+								"{{limitOrderId}}"
+							]
+						},
+						"description": "Procesar una orden específica por ID. Usar ID de orden LIMIT creada previamente."
+					},
+					"response": []
+				},
+				{
+					"name": "Process Batch Orders",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"limit\": 5\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/order-processing/process-batch",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"order-processing",
+								"process-batch"
+							]
+						},
+						"description": "Procesar múltiples órdenes pendientes en batch. Útil para simular procesamiento masivo."
+					},
+					"response": []
+				},
+				{
+					"name": "Process REJECTED Order - Should Fail",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/order-processing/process/7",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"order-processing",
+								"process",
+								"7"
+							]
+						},
+						"description": "Intentar procesar una orden con status REJECTED. Debería fallar con error 400 indicando que solo se pueden procesar órdenes NEW."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para simular procesamiento de órdenes LIMIT"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000/api",
+			"type": "string"
+		},
+		{
+			"key": "userId",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "instrumentId",
+			"value": "4",
+			"type": "string",
+			"description": "MOLA - Instrumento con market data"
+		},
+		{
+			"key": "instrumentIdNoData",
+			"value": "1",
+			"type": "string",
+			"description": "DYCA - Instrumento sin market data"
+		},
+		{
+			"key": "limitOrderId",
+			"value": "0",
+			"type": "string",
+			"description": "ID de orden LIMIT creada para tests de cancelación (actualizar manualmente)"
+		},
+		{
+			"key": "filledOrderId",
+			"value": "0",
+			"type": "string",
+			"description": "ID de orden FILLED para tests de cancelación (actualizar manualmente)"
+		}
+	]
+}
