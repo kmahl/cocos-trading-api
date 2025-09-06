@@ -336,7 +336,7 @@ Este proyecto cumple con todos los requerimientos del challenge backend de Cocos
 - Validaciones completas de negocio
 - Test funcional como se solicita
 
-Para más detalles técnicos y decisiones de diseño, ver:
-- **Decisiones de Diseño**: `/docs/DESIGN_DECISIONS.md`
-- **Documentación Técnica**: `/research/` folder
-- **Logs de Desarrollo**: `/research/DEVELOPMENT_LOG.md`
+### 📚 Documentación Técnica
+
+Para decisiones de implementación y análisis técnico detallado, ver:
+- **Decisiones de Diseño**: `/docs/DESIGN_DECISIONS.md` - Decisiones tomadas y justificaciones técnicas
