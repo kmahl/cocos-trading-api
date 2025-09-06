@@ -1,4 +1,3 @@
-import './aliasSetup'; // DEBE ser lo primero
 import 'reflect-metadata';
 import express from 'express';
 import cors from 'cors';
@@ -6,7 +5,6 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 
 import { AppDataSource } from './data-source';
-// TODO: Implementar path aliases correctamente para imports más limpios
 import { serverConfig } from './config/database';
 import { Logger } from './utils/logger';
 import {

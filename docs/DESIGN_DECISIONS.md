@@ -324,20 +324,6 @@ interface ErrorResponse {
 - **Error Prevention**: Catch errors en compile time
 - **Maintainability**: Código más fácil de leer y modificar
 
-### 2. Path Aliases
-
-**Decisión**: Path aliases centralizados con sync automático
-
-```typescript
-// En lugar de: ../../../controllers/OrderController
-import { OrderController } from '@/controllers';
-```
-
-**Justificación**:
-- **Readability**: Imports más claros y concisos
-- **Refactoring**: Menos friction para mover archivos
-- **Developer Experience**: IntelliSense mejorado
-
 ## 📋 Documentación
 
 ### 1. API Documentation

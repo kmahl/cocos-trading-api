@@ -11,7 +11,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { validate, ValidationError } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
-// TODO: Implementar path aliases correctamente para imports más limpios
 import { Logger } from '../utils/logger';
 
 // Tipo genérico para clases DTO

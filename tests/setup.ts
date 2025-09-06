@@ -5,7 +5,6 @@
  * environment variables, and common test utilities.
  */
 
-import 'tsconfig-paths/register';
 import { config } from 'dotenv';
 
 // Load test environment variables

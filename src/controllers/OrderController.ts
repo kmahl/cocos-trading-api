@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-// TODO: Implementar path aliases correctamente para imports más limpios
 import { OrderService } from '../services/OrderService';
 import { CreateOrderDto } from '../dto/index';
 import { OrderSide } from '../entities/index';

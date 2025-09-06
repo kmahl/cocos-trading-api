@@ -1,5 +1,4 @@
 import { Router } from 'express';
-// TODO: Implementar path aliases correctamente para imports más limpios
 import { PortfolioController } from '../controllers/PortfolioController';
 import { validateParams } from '../middlewares/dtoValidation';
 import { GetPortfolioDto } from '../dto/index';

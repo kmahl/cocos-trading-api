@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-// TODO: Implementar path aliases correctamente para imports más limpios
 import { Logger } from '../utils/logger';
 import { ApiErrorResponseDto } from '../dto/responses';
 

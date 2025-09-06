@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-// TODO: Implementar path aliases correctamente para imports más limpios
 import { PortfolioService } from '../services/PortfolioService';
 import { Logger } from '../utils/logger';
 import { AppError } from '../middlewares/errorHandler';
