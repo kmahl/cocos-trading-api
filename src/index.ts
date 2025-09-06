@@ -10,6 +10,7 @@ import { AppDataSource } from './data-source';
 import { serverConfig } from './config/database';
 import { Logger } from './utils/logger';
 import { globalErrorHandler } from './middlewares/errorHandler';
+import { setupSwagger } from './config/swagger';
 import apiRoutes from './routes';
 
 const app = express();
@@ -21,7 +22,10 @@ app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// API Routesasdsad
+// Setup Swagger documentation
+setupSwagger(app);
+
+// API Routes
 app.use('/api', apiRoutes);
 
 // Global error handler (debe ir al final)
