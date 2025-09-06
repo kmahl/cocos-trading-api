@@ -42,17 +42,43 @@ export class OrderRepository implements IOrderRepository {
   }
 
   /**
-   * Buscar orden por ID (puede devolver null)
+   * Método unificado para buscar orden por ID
+   * @param orderId - ID de la orden a buscar
+   * @param options - Opciones adicionales (relations, shouldThrow)
    */
-  async findById(orderId: number, relations?: string[]): Promise<Order | null> {
-    Logger.query('Finding order by ID', { orderId, relations });
+  async findById(
+    orderId: number,
+    options: {
+      relations?: string[];
+      shouldThrow?: boolean;
+    } = {}
+  ): Promise<Order | null> {
+    const { relations = [], shouldThrow = false } = options;
 
-    const options: any = { where: { id: orderId } };
-    if (relations && relations.length > 0) {
-      options.relations = relations;
+    Logger.query('Finding order by ID', { orderId, relations, shouldThrow });
+
+    const queryOptions: any = { where: { id: orderId } };
+    if (relations.length > 0) {
+      queryOptions.relations = relations;
     }
 
-    return await this.repository.findOne(options);
+    const order = await this.repository.findOne(queryOptions);
+
+    if (!order && shouldThrow) {
+      const error = new NotFoundError(`Order with ID ${orderId} not found`);
+      Logger.error('Order not found', error);
+      throw error;
+    }
+
+    if (order) {
+      Logger.query('Order found successfully', {
+        orderId,
+        status: order.status,
+        userId: order.userId,
+      });
+    }
+
+    return order;
   }
 
   /**
@@ -78,10 +104,10 @@ export class OrderRepository implements IOrderRepository {
   }
 
   /**
-   * Actualizar orden existente
+   * Método unificado para guardar/actualizar orden
    */
-  async update(order: Order): Promise<Order> {
-    Logger.query('Updating order', {
+  async save(order: Order): Promise<Order> {
+    Logger.query('Saving/updating order', {
       orderId: order.id,
       status: order.status,
     });
@@ -90,50 +116,23 @@ export class OrderRepository implements IOrderRepository {
   }
 
   /**
-   * Buscar orden por ID con validación de existencia
+   * Método unificado para buscar órdenes con filtros
+   * @param options - Opciones de búsqueda de TypeORM
+   * @param findOne - Si true, devuelve solo el primer resultado
    */
-  async findByIdOrThrow(orderId: number): Promise<Order> {
-    Logger.query('Finding order by ID', { orderId });
+  async find(options: any): Promise<Order[]>;
+  async find(options: any, findOne: true): Promise<Order | null>;
+  async find(options: any, findOne: false): Promise<Order[]>;
+  async find(
+    options: any,
+    findOne: boolean = false
+  ): Promise<Order[] | Order | null> {
+    Logger.query('Finding orders with filters', { options, findOne });
 
-    const order = await this.repository.findOne({
-      where: { id: orderId },
-    });
-
-    if (!order) {
-      const error = new NotFoundError(`Order with ID ${orderId} not found`);
-      Logger.error('Order not found', error);
-      throw error;
+    if (findOne) {
+      return await this.repository.findOne(options);
     }
 
-    Logger.query('Order found successfully', {
-      orderId,
-      status: order.status,
-      userId: order.userId,
-    });
-
-    return order;
-  }
-
-  /**
-   * Buscar múltiples órdenes con filtros
-   */
-  async find(options: any): Promise<Order[]> {
-    Logger.query('Finding orders with filters', options);
     return await this.repository.find(options);
-  }
-
-  /**
-   * Buscar una orden con filtros
-   */
-  async findOne(options: any): Promise<Order | null> {
-    Logger.query('Finding single order with filters', options);
-    return await this.repository.findOne(options);
-  }
-
-  /**
-   * Guardar orden (para updates)
-   */
-  async save(order: Order): Promise<Order> {
-    return await this.repository.save(order);
   }
 }

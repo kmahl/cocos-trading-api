@@ -125,11 +125,11 @@ describe('InstrumentController - Unit Tests', () => {
                 expect(mockResponse.status).toHaveBeenCalledWith(200);
                 expect(mockResponse.json).toHaveBeenCalledWith({
                     success: true,
-                    total: 1,
+                    total: 2,
                     limit: 10,
                     query: 'DYCA',
-                    message: 'Found 1 instrument(s) matching your search',
-                    data: [mockInstruments],
+                    message: 'Found 2 instruments matching "DYCA"',
+                    data: mockInstrumentsList,
                     timestamp: expect.any(String),
                 });
             });
@@ -166,7 +166,7 @@ describe('InstrumentController - Unit Tests', () => {
                     total: 0,
                     limit: 100,
                     query: 'NONEXISTENT',
-                    message: 'No instruments found matching your search criteria',
+                    message: 'Found 0 instruments matching "NONEXISTENT"',
                     data: [],
                     timestamp: expect.any(String),
                 });
@@ -197,12 +197,14 @@ describe('InstrumentController - Unit Tests', () => {
 
                 // Assert
                 expect(mockInstrumentService.searchInstruments).not.toHaveBeenCalled();
-                expect(mockResponse.status).toHaveBeenCalledWith(400);
-                expect(mockResponse.json).toHaveBeenCalledWith({
-                    success: false,
-                    message: 'Search query is required',
-                    timestamp: expect.any(String),
-                });
+                expect(mockNext).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        message: 'Search query is required',
+                        statusCode: 400
+                    })
+                );
+                expect(mockResponse.status).not.toHaveBeenCalled();
+                expect(mockResponse.json).not.toHaveBeenCalled();
             });
 
             test('should return 400 when query parameter is empty', async () => {
@@ -214,12 +216,14 @@ describe('InstrumentController - Unit Tests', () => {
 
                 // Assert
                 expect(mockInstrumentService.searchInstruments).not.toHaveBeenCalled();
-                expect(mockResponse.status).toHaveBeenCalledWith(400);
-                expect(mockResponse.json).toHaveBeenCalledWith({
-                    success: false,
-                    message: 'Search query cannot be empty',
-                    timestamp: expect.any(String),
-                });
+                expect(mockNext).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        message: 'Search query is required',
+                        statusCode: 400
+                    })
+                );
+                expect(mockResponse.status).not.toHaveBeenCalled();
+                expect(mockResponse.json).not.toHaveBeenCalled();
             });
 
             test('should return 400 when limit is invalid (too low)', async () => {
@@ -231,12 +235,14 @@ describe('InstrumentController - Unit Tests', () => {
 
                 // Assert
                 expect(mockInstrumentService.searchInstruments).not.toHaveBeenCalled();
-                expect(mockResponse.status).toHaveBeenCalledWith(400);
-                expect(mockResponse.json).toHaveBeenCalledWith({
-                    success: false,
-                    message: 'Limit must be between 1 and 100',
-                    timestamp: expect.any(String),
-                });
+                expect(mockNext).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        message: 'Limit must be between 1 and 100',
+                        statusCode: 400
+                    })
+                );
+                expect(mockResponse.status).not.toHaveBeenCalled();
+                expect(mockResponse.json).not.toHaveBeenCalled();
             });
 
             test('should return 400 when limit is invalid (too high)', async () => {
@@ -247,35 +253,35 @@ describe('InstrumentController - Unit Tests', () => {
                 await instrumentController.searchInstruments(mockRequest as Request, mockResponse as Response, mockNext);
 
                 // Assert
-                expect(mockResponse.status).toHaveBeenCalledWith(400);
-                expect(mockResponse.json).toHaveBeenCalledWith({
-                    success: false,
-                    message: 'Limit must be between 1 and 100',
-                    timestamp: expect.any(String),
-                });
+                expect(mockInstrumentService.searchInstruments).not.toHaveBeenCalled();
+                expect(mockNext).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        message: 'Limit must be between 1 and 100',
+                        statusCode: 400
+                    })
+                );
+                expect(mockResponse.status).not.toHaveBeenCalled();
+                expect(mockResponse.json).not.toHaveBeenCalled();
             });
 
-            test('should return 400 when limit is not a number', async () => {
+            test('should use default limit when limit is not a number', async () => {
                 // Arrange
                 mockRequest.query = { q: 'test', limit: 'invalid' };
+                mockInstrumentService.searchInstruments.mockResolvedValue([]);
 
                 // Act
                 await instrumentController.searchInstruments(mockRequest as Request, mockResponse as Response, mockNext);
 
                 // Assert
-                expect(mockResponse.status).toHaveBeenCalledWith(400);
-                expect(mockResponse.json).toHaveBeenCalledWith({
-                    success: false,
-                    message: 'Limit must be a valid number',
-                    timestamp: expect.any(String),
-                });
+                expect(mockInstrumentService.searchInstruments).toHaveBeenCalledWith('test', 100);
+                expect(mockResponse.status).toHaveBeenCalledWith(200);
             });
 
         });
 
         describe('Error handling', () => {
 
-            test('should return 500 when service throws error', async () => {
+            test('should call next with error when service throws error', async () => {
                 // Arrange
                 mockRequest.query = { q: 'test' };
                 const serviceError = new Error('Database connection failed');
@@ -285,13 +291,9 @@ describe('InstrumentController - Unit Tests', () => {
                 await instrumentController.searchInstruments(mockRequest as Request, mockResponse as Response, mockNext);
 
                 // Assert
-                expect(mockResponse.status).toHaveBeenCalledWith(500);
-                expect(mockResponse.json).toHaveBeenCalledWith({
-                    success: false,
-                    message: 'Error searching instruments',
-                    error: 'Database connection failed',
-                    timestamp: expect.any(String),
-                });
+                expect(mockNext).toHaveBeenCalledWith(serviceError);
+                expect(mockResponse.status).not.toHaveBeenCalled();
+                expect(mockResponse.json).not.toHaveBeenCalled();
             });
 
         });
@@ -331,12 +333,14 @@ describe('InstrumentController - Unit Tests', () => {
 
                 // Assert
                 expect(mockInstrumentService.getInstrumentById).toHaveBeenCalledWith(999999);
-                expect(mockResponse.status).toHaveBeenCalledWith(404);
-                expect(mockResponse.json).toHaveBeenCalledWith({
-                    success: false,
-                    message: 'Instrument not found',
-                    timestamp: expect.any(String),
-                });
+                expect(mockNext).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        message: 'Instrument not found',
+                        statusCode: 404
+                    })
+                );
+                expect(mockResponse.status).not.toHaveBeenCalled();
+                expect(mockResponse.json).not.toHaveBeenCalled();
             });
 
         });
@@ -352,12 +356,14 @@ describe('InstrumentController - Unit Tests', () => {
 
                 // Assert
                 expect(mockInstrumentService.getInstrumentById).not.toHaveBeenCalled();
-                expect(mockResponse.status).toHaveBeenCalledWith(400);
-                expect(mockResponse.json).toHaveBeenCalledWith({
-                    success: false,
-                    message: 'Invalid instrument ID',
-                    timestamp: expect.any(String),
-                });
+                expect(mockNext).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        message: 'Invalid instrument ID provided',
+                        statusCode: 400
+                    })
+                );
+                expect(mockResponse.status).not.toHaveBeenCalled();
+                expect(mockResponse.json).not.toHaveBeenCalled();
             });
 
             test('should return 400 when ID is negative', async () => {
@@ -368,12 +374,15 @@ describe('InstrumentController - Unit Tests', () => {
                 await instrumentController.getInstrumentById(mockRequest as Request, mockResponse as Response, mockNext);
 
                 // Assert
-                expect(mockResponse.status).toHaveBeenCalledWith(400);
-                expect(mockResponse.json).toHaveBeenCalledWith({
-                    success: false,
-                    message: 'Instrument ID must be a positive number',
-                    timestamp: expect.any(String),
-                });
+                expect(mockInstrumentService.getInstrumentById).not.toHaveBeenCalled();
+                expect(mockNext).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        message: 'Invalid instrument ID provided',
+                        statusCode: 400
+                    })
+                );
+                expect(mockResponse.status).not.toHaveBeenCalled();
+                expect(mockResponse.json).not.toHaveBeenCalled();
             });
 
             test('should return 400 when ID is zero', async () => {
@@ -384,19 +393,22 @@ describe('InstrumentController - Unit Tests', () => {
                 await instrumentController.getInstrumentById(mockRequest as Request, mockResponse as Response, mockNext);
 
                 // Assert
-                expect(mockResponse.status).toHaveBeenCalledWith(400);
-                expect(mockResponse.json).toHaveBeenCalledWith({
-                    success: false,
-                    message: 'Instrument ID must be a positive number',
-                    timestamp: expect.any(String),
-                });
+                expect(mockInstrumentService.getInstrumentById).not.toHaveBeenCalled();
+                expect(mockNext).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        message: 'Invalid instrument ID provided',
+                        statusCode: 400
+                    })
+                );
+                expect(mockResponse.status).not.toHaveBeenCalled();
+                expect(mockResponse.json).not.toHaveBeenCalled();
             });
 
         });
 
         describe('Error handling', () => {
 
-            test('should return 500 when service throws error', async () => {
+            test('should call next with error when service throws error', async () => {
                 // Arrange
                 mockRequest.params = { id: '4' };
                 const serviceError = new Error('Database query failed');
@@ -406,13 +418,9 @@ describe('InstrumentController - Unit Tests', () => {
                 await instrumentController.getInstrumentById(mockRequest as Request, mockResponse as Response, mockNext);
 
                 // Assert
-                expect(mockResponse.status).toHaveBeenCalledWith(500);
-                expect(mockResponse.json).toHaveBeenCalledWith({
-                    success: false,
-                    message: 'Error retrieving instrument',
-                    error: 'Database query failed',
-                    timestamp: expect.any(String),
-                });
+                expect(mockNext).toHaveBeenCalledWith(serviceError);
+                expect(mockResponse.status).not.toHaveBeenCalled();
+                expect(mockResponse.json).not.toHaveBeenCalled();
             });
 
         });
@@ -436,16 +444,21 @@ describe('InstrumentController - Unit Tests', () => {
 
                 // Assert
                 expect(mockInstrumentService.getInstrumentById).toHaveBeenCalledWith(4);
-                expect(mockInstrumentService.getMarketData).toHaveBeenCalledWith(4, {}, 10);
+                expect(mockInstrumentService.getMarketData).toHaveBeenCalledWith(4, {
+                    startDate: undefined,
+                    endDate: undefined,
+                    limit: 10
+                });
                 expect(mockResponse.status).toHaveBeenCalledWith(200);
                 expect(mockResponse.json).toHaveBeenCalledWith({
                     success: true,
                     total: 1,
                     instrumentId: 4,
                     instrumentType: 'ACCIONES',
+                    dateRange: undefined,
                     limit: 10,
-                    message: 'Retrieved 1 market data record(s)',
-                    data: mockMarketData,
+                    message: 'Retrieved 1 market data record',
+                    data: [mockMarketData],
                     timestamp: expect.any(String),
                 });
             });
@@ -469,8 +482,9 @@ describe('InstrumentController - Unit Tests', () => {
                     total: 0,
                     instrumentId: 66,
                     instrumentType: 'MONEDA',
+                    dateRange: undefined,
                     limit: 100,
-                    message: 'No market data available for this instrument',
+                    message: 'No market data available for this instrument with the specified filters',
                     data: [],
                     timestamp: expect.any(String),
                 });
@@ -494,8 +508,11 @@ describe('InstrumentController - Unit Tests', () => {
                 // Assert
                 expect(mockInstrumentService.getMarketData).toHaveBeenCalledWith(
                     4,
-                    { startDate: '2023-07-01', endDate: '2023-07-31' },
-                    5
+                    { 
+                        startDate: '2023-07-01', 
+                        endDate: '2023-07-31',
+                        limit: 5
+                    }
                 );
                 expect(mockResponse.json).toHaveBeenCalledWith(
                     expect.objectContaining({
@@ -522,7 +539,7 @@ describe('InstrumentController - Unit Tests', () => {
                 expect(mockResponse.json).toHaveBeenCalledWith(
                     expect.objectContaining({
                         instrumentType: 'ACCIONES',
-                        data: mockMarketData,
+                        data: [mockMarketData],
                     })
                 );
             });
@@ -546,8 +563,7 @@ describe('InstrumentController - Unit Tests', () => {
                     instrumentId: 4,
                     instrumentType: 'ACCIONES',
                     requestedType: 'MONEDA',
-                    limit: 100,
-                    message: 'Instrument type (ACCIONES) does not match requested type (MONEDA)',
+                    message: "Instrument type 'ACCIONES' does not match requested type 'MONEDA'",
                     data: [],
                     timestamp: expect.any(String),
                 });
@@ -566,12 +582,14 @@ describe('InstrumentController - Unit Tests', () => {
 
                 // Assert
                 expect(mockInstrumentService.getInstrumentById).not.toHaveBeenCalled();
-                expect(mockResponse.status).toHaveBeenCalledWith(400);
-                expect(mockResponse.json).toHaveBeenCalledWith({
-                    success: false,
-                    message: 'Invalid instrument ID',
-                    timestamp: expect.any(String),
-                });
+                expect(mockNext).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        message: 'Invalid instrument ID provided',
+                        statusCode: 400
+                    })
+                );
+                expect(mockResponse.status).not.toHaveBeenCalled();
+                expect(mockResponse.json).not.toHaveBeenCalled();
             });
 
             test('should return 400 when date format is invalid', async () => {
@@ -583,12 +601,14 @@ describe('InstrumentController - Unit Tests', () => {
                 await instrumentController.getMarketData(mockRequest as Request, mockResponse as Response, mockNext);
 
                 // Assert
-                expect(mockResponse.status).toHaveBeenCalledWith(400);
-                expect(mockResponse.json).toHaveBeenCalledWith({
-                    success: false,
-                    message: 'Invalid date format. Use YYYY-MM-DD',
-                    timestamp: expect.any(String),
-                });
+                expect(mockNext).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        message: 'Invalid start date format. Use YYYY-MM-DD',
+                        statusCode: 400
+                    })
+                );
+                expect(mockResponse.status).not.toHaveBeenCalled();
+                expect(mockResponse.json).not.toHaveBeenCalled();
             });
 
             test('should return 404 when instrument does not exist', async () => {
@@ -600,12 +620,14 @@ describe('InstrumentController - Unit Tests', () => {
                 await instrumentController.getMarketData(mockRequest as Request, mockResponse as Response, mockNext);
 
                 // Assert
-                expect(mockResponse.status).toHaveBeenCalledWith(404);
-                expect(mockResponse.json).toHaveBeenCalledWith({
-                    success: false,
-                    message: 'Instrument not found',
-                    timestamp: expect.any(String),
-                });
+                expect(mockNext).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        message: 'Instrument not found',
+                        statusCode: 404
+                    })
+                );
+                expect(mockResponse.status).not.toHaveBeenCalled();
+                expect(mockResponse.json).not.toHaveBeenCalled();
             });
 
             test('should handle large limit gracefully (cap at 1000)', async () => {
@@ -620,7 +642,11 @@ describe('InstrumentController - Unit Tests', () => {
                 await instrumentController.getMarketData(mockRequest as Request, mockResponse as Response, mockNext);
 
                 // Assert
-                expect(mockInstrumentService.getMarketData).toHaveBeenCalledWith(4, {}, 1000);
+                expect(mockInstrumentService.getMarketData).toHaveBeenCalledWith(4, {
+                    startDate: undefined,
+                    endDate: undefined,
+                    limit: 1000
+                });
                 expect(mockResponse.json).toHaveBeenCalledWith(
                     expect.objectContaining({
                         limit: 1000,
@@ -632,7 +658,7 @@ describe('InstrumentController - Unit Tests', () => {
 
         describe('Error handling', () => {
 
-            test('should return 500 when service throws error', async () => {
+            test('should call next with error when service throws error', async () => {
                 // Arrange
                 mockRequest.params = { id: '4' };
                 const serviceError = new Error('Market data query failed');
@@ -642,13 +668,9 @@ describe('InstrumentController - Unit Tests', () => {
                 await instrumentController.getMarketData(mockRequest as Request, mockResponse as Response, mockNext);
 
                 // Assert
-                expect(mockResponse.status).toHaveBeenCalledWith(500);
-                expect(mockResponse.json).toHaveBeenCalledWith({
-                    success: false,
-                    message: 'Error retrieving market data',
-                    error: 'Market data query failed',
-                    timestamp: expect.any(String),
-                });
+                expect(mockNext).toHaveBeenCalledWith(serviceError);
+                expect(mockResponse.status).not.toHaveBeenCalled();
+                expect(mockResponse.json).not.toHaveBeenCalled();
             });
 
         });

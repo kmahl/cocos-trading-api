@@ -30,12 +30,6 @@ export interface IInstrumentService {
   getCurrentPrice(instrumentId: number): Promise<number>;
 }
 
-export interface IOrderRepository {
-  create(orderData: any): Promise<any>;
-  findByIdOrThrow(id: number): Promise<any>;
-  update(order: any): Promise<any>;
-}
-
 export interface IPortfolioValidationService {
   checkAvailableCash(userId: number, amount: number): Promise<boolean>;
   checkAvailableShares(

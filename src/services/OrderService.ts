@@ -142,9 +142,12 @@ export class OrderService {
     orderId: number,
     userId: number
   ): Promise<OrderResponseDto> {
-    const order = await this.orderRepository.findOne({
-      where: { id: orderId },
-    });
+    const order = (await this.orderRepository.find(
+      {
+        where: { id: orderId },
+      },
+      true
+    )) as Order | null;
 
     if (!order) {
       throw new AppError('Order not found', 404);
@@ -190,7 +193,9 @@ export class OrderService {
    * Obtener orden por ID
    */
   async getOrderById(orderId: number): Promise<OrderResponseDto | null> {
-    const order = await this.orderRepository.findById(orderId, ['instrument']);
+    const order = await this.orderRepository.findById(orderId, {
+      relations: ['instrument'],
+    });
 
     if (!order) {
       return null;
@@ -242,12 +247,16 @@ export class OrderService {
       whereConditions.status = normalizedStatus as OrderStatus;
     }
 
-    const orders = await this.orderRepository.find({
+    const orders = (await this.orderRepository.find({
       where: whereConditions,
       relations: ['instrument'],
       order: { datetime: 'DESC' },
       take: limit,
-    });
+    })) as Order[];
+
+    if (!orders) {
+      return [];
+    }
 
     return orders.map(order => ({
       id: order.id,
@@ -290,11 +299,15 @@ export class OrderService {
     Logger.order('Processing pending orders', { limit });
 
     // Obtener órdenes pendientes
-    const pendingOrders = await this.orderRepository.find({
+    const pendingOrders = (await this.orderRepository.find({
       where: { status: OrderStatus.NEW },
       order: { datetime: 'ASC' }, // FIFO
       take: limit,
-    });
+    })) as Order[];
+
+    if (!pendingOrders) {
+      return [];
+    }
 
     const processedOrders: OrderResponseDto[] = [];
 
@@ -322,12 +335,16 @@ export class OrderService {
    * Obtener órdenes pendientes
    */
   async getPendingOrders(limit: number = 50): Promise<OrderResponseDto[]> {
-    const orders = await this.orderRepository.find({
+    const orders = (await this.orderRepository.find({
       where: { status: OrderStatus.NEW },
       relations: ['instrument'],
       order: { datetime: 'ASC' },
       take: limit,
-    });
+    })) as Order[];
+
+    if (!orders) {
+      return [];
+    }
 
     return orders.map(order => ({
       id: order.id,

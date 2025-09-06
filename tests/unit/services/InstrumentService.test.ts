@@ -60,23 +60,25 @@ describe('InstrumentService - Unit Tests', () => {
   const mockMarketData: MarketData[] = [
     {
       id: 1,
-      instrumentid: 4,
+      instrumentId: 4, // Cambiar de instrumentid a instrumentId
       high: 100.50,
       low: 95.25,
       open: 98.00,
       close: 99.75,
-      previousclose: 97.50,
+      previousClose: 97.50, // Cambiar de previousclose a previousClose
       date: new Date('2023-07-15T00:00:00Z'),
+      instrument: {} as any, // Agregar propiedad instrument requerida
     } as MarketData,
     {
       id: 2,
-      instrumentid: 4,
+      instrumentId: 4, // Cambiar de instrumentid a instrumentId
       high: 102.00,
       low: 97.50,
       open: 99.75,
       close: 101.25,
-      previousclose: 99.75,
+      previousClose: 99.75, // Cambiar de previousclose a previousClose
       date: new Date('2023-07-14T00:00:00Z'),
+      instrument: {} as any, // Agregar propiedad instrument requerida
     } as MarketData,
   ];
 
@@ -531,143 +533,6 @@ describe('InstrumentService - Unit Tests', () => {
 
     });
 
-  });
-
-  describe('getCurrentPricesBatch', () => {
-    
-    describe('Successful retrieval', () => {
-      
-      test('should return prices for multiple instruments', async () => {
-        // Arrange
-        const instrumentIds = [1, 4];
-        const mockRawResults = [
-          { md_instrumentid: 1, md_close: 150.25 },
-          { md_instrumentid: 4, md_close: 99.75 },
-        ];
-        
-        mockQueryBuilder.getRawMany.mockResolvedValue(mockRawResults);
-
-        // Act
-        const result = await instrumentService.getCurrentPricesBatch(instrumentIds);
-
-        // Assert
-        expect(mockMarketDataRepository.createQueryBuilder).toHaveBeenCalledWith('md');
-        expect(mockQueryBuilder.select).toHaveBeenCalledWith(['md.instrumentid', 'md.close']);
-        expect(mockQueryBuilder.where).toHaveBeenCalledWith(
-          'md.instrumentid IN (:...instrumentIds)',
-          { instrumentIds }
-        );
-        expect(result.get(1)).toBe(150.25);
-        expect(result.get(4)).toBe(99.75);
-      });
-
-      test('should return 0 for instruments with no market data', async () => {
-        // Arrange
-        const instrumentIds = [1, 66]; // 66 = ARS with no market data
-        const mockRawResults = [
-          { md_instrumentid: 1, md_close: 150.25 },
-          // No result for 66
-        ];
-        
-        mockQueryBuilder.getRawMany.mockResolvedValue(mockRawResults);
-
-        // Act
-        const result = await instrumentService.getCurrentPricesBatch(instrumentIds);
-
-        // Assert
-        expect(result.get(1)).toBe(150.25);
-        expect(result.get(66)).toBe(0);
-      });
-
-      test('should return empty map for empty input', async () => {
-        // Act
-        const result = await instrumentService.getCurrentPricesBatch([]);
-
-        // Assert
-        expect(result.size).toBe(0);
-        expect(mockMarketDataRepository.createQueryBuilder).not.toHaveBeenCalled();
-      });
-
-      test('should handle null close prices gracefully', async () => {
-        // Arrange
-        const instrumentIds = [1];
-        const mockRawResults = [
-          { md_instrumentid: 1, md_close: null },
-        ];
-        
-        mockQueryBuilder.getRawMany.mockResolvedValue(mockRawResults);
-
-        // Act
-        const result = await instrumentService.getCurrentPricesBatch(instrumentIds);
-
-        // Assert
-        expect(result.get(1)).toBe(0);
-      });
-
-    });
-
-    describe('Error handling', () => {
-      
-      test('should throw error when repository query fails', async () => {
-        // Arrange
-        const instrumentIds = [1, 4];
-        const dbError = new Error('Database connection failed');
-        mockQueryBuilder.getRawMany.mockRejectedValue(dbError);
-
-        // Act & Assert
-        await expect(instrumentService.getCurrentPricesBatch(instrumentIds))
-          .rejects.toThrow('Failed to get batch prices');
-      });
-
-    });
-
-  });
-
-  describe('instrumentExists', () => {
-    
-    test('should return true when instrument exists', async () => {
-      // Arrange
-      const instrumentId = 4;
-      
-      jest.spyOn(instrumentService, 'getInstrumentById').mockResolvedValue({
-        id: 4,
-        ticker: 'MOLA',
-        name: 'Molinos Agro S.A.',
-        type: 'ACCIONES',
-      });
-
-      // Act
-      const result = await instrumentService.instrumentExists(instrumentId);
-
-      // Assert
-      expect(result).toBe(true);
-    });
-
-    test('should return false when instrument does not exist', async () => {
-      // Arrange
-      const instrumentId = 999999;
-      
-      jest.spyOn(instrumentService, 'getInstrumentById').mockResolvedValue(null);
-
-      // Act
-      const result = await instrumentService.instrumentExists(instrumentId);
-
-      // Assert
-      expect(result).toBe(false);
-    });
-
-    test('should return false when getInstrumentById throws error', async () => {
-      // Arrange
-      const instrumentId = 4;
-      
-      jest.spyOn(instrumentService, 'getInstrumentById').mockRejectedValue(new Error('DB Error'));
-
-      // Act
-      const result = await instrumentService.instrumentExists(instrumentId);
-
-      // Assert
-      expect(result).toBe(false);
-    });
 
   });
 

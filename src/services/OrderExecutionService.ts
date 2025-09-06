@@ -14,7 +14,9 @@ export class OrderExecutionService {
   ) {}
 
   async executeOrder(orderId: number): Promise<void> {
-    const order = await this.orderRepository.findByIdOrThrow(orderId);
+    const order = (await this.orderRepository.findById(orderId, {
+      shouldThrow: true,
+    })) as Order;
 
     if (order.status !== OrderStatus.NEW) {
       const message = `Cannot process order with status: ${order.status}. Only NEW orders can be processed.`;
@@ -28,7 +30,7 @@ export class OrderExecutionService {
     try {
       await this.validateOrderAtExecution(order);
       order.status = OrderStatus.FILLED;
-      await this.orderRepository.update(order);
+      await this.orderRepository.save(order);
 
       Logger.order('Order executed successfully', {
         orderId,
@@ -38,7 +40,7 @@ export class OrderExecutionService {
     } catch (error) {
       Logger.error('Error executing order', error as Error);
       order.status = OrderStatus.REJECTED;
-      await this.orderRepository.update(order);
+      await this.orderRepository.save(order);
       throw error;
     }
   }

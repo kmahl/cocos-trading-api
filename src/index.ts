@@ -9,7 +9,10 @@ import { AppDataSource } from './data-source';
 // TODO: Implementar path aliases correctamente para imports más limpios
 import { serverConfig } from './config/database';
 import { Logger } from './utils/logger';
-import { globalErrorHandler } from './middlewares/errorHandler';
+import {
+  globalErrorHandler,
+  notFoundHandler,
+} from './middlewares/errorHandler';
 import { setupSwagger } from './config/swagger';
 import apiRoutes from './routes';
 
@@ -27,6 +30,9 @@ setupSwagger(app);
 
 // API Routes
 app.use('/api', apiRoutes);
+
+// 404 handler para rutas no encontradas (debe ir después de todas las rutas)
+app.use(notFoundHandler);
 
 // Global error handler (debe ir al final)
 app.use(globalErrorHandler);

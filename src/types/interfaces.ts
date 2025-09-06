@@ -18,9 +18,26 @@ export interface IUserRepository {
   findById(id: number): Promise<User | null>;
   findByIdOrThrow(id: number): Promise<User>;
 }
-// TODO: ESTO NO TIENE TODOS LOS METODOS EXISTENTES EN ORDERREPOSITORY
+
+// Unified OrderRepository interface - single source of truth
 export interface IOrderRepository {
-  findByUserId(userId: number, limit?: number): Promise<Order[]>;
+  // Core CRUD operations
+  getAllUserOrders(userId: number): Promise<Order[]>;
+  findById(
+    orderId: number,
+    options?: {
+      relations?: string[];
+      shouldThrow?: boolean;
+    }
+  ): Promise<Order | null>;
+  createAndSave(orderData: Partial<Order>): Promise<Order>;
+  save(order: Order): Promise<Order>;
+
+  // Flexible query methods with overloads for better type safety
+  find(options: any): Promise<Order[]>;
+  find(options: any, findOne: true): Promise<Order | null>;
+  find(options: any, findOne: false): Promise<Order[]>;
+  find(options: any, findOne?: boolean): Promise<Order[] | Order | null>;
 }
 export interface IInstrumentRepository {
   findById(id: number): Promise<Instrument | null>;

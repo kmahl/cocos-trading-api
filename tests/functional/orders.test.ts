@@ -112,7 +112,7 @@ describe('Order Creation - Functional Tests', () => {
           type: 'MARKET',
           status: 'FILLED', // MARKET orders se ejecutan inmediatamente
         },
-        message: 'Order created and processed successfully',
+        message: 'Order executed successfully', // Mensaje actualizado para órdenes FILLED
       });
 
       // Verificar que el precio fue asignado automáticamente
@@ -271,7 +271,8 @@ describe('Order Creation - Functional Tests', () => {
 
       // Debe crear la orden con status REJECTED (201) por fondos insuficientes
       expect(response.status).toBe(201);
-      expect(response.body.success).toBe(true);
+      expect(response.body.success).toBe(false); // Las órdenes rechazadas ahora retornan success: false
+      expect(response.body.message).toContain('Order rejected: Insufficient cash balance');
       expect(response.body.data).toMatchObject({
         side: 'BUY',
         status: 'REJECTED',
@@ -294,7 +295,8 @@ describe('Order Creation - Functional Tests', () => {
 
       // Debe crear la orden con status REJECTED (201) por acciones insuficientes
       expect(response.status).toBe(201);
-      expect(response.body.success).toBe(true);
+      expect(response.body.success).toBe(false); // Las órdenes rechazadas ahora retornan success: false
+      expect(response.body.message).toContain('Order rejected: Insufficient shares available');
       expect(response.body.data).toMatchObject({
         side: 'SELL',
         status: 'REJECTED',
