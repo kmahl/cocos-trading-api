@@ -19,7 +19,6 @@ import helmet from 'helmet';
 import { AppDataSource } from '../../src/data-source/index';
 import router from '../../src/routes';
 import { globalErrorHandler } from '../../src/middlewares';
-import { OrderStatus, OrderSide, OrderType } from '../../src/entities/Order';
 
 // Mock logger to avoid console spam
 jest.mock('../../src/utils/logger', () => ({
