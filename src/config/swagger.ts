@@ -25,6 +25,7 @@ const options: swaggerJsdoc.Options = {
         - Portfolio management with real-time valuations
         - Instrument search by ticker and name
         - Order management (MARKET/LIMIT orders)
+        - Cash operations (deposits and withdrawals)
         - Real-time order processing
         - Market data integration
         
@@ -328,6 +329,67 @@ const options: swaggerJsdoc.Options = {
             },
           },
         },
+        CashDepositRequest: {
+          type: 'object',
+          required: ['userId', 'amount'],
+          properties: {
+            userId: {
+              type: 'integer',
+              description: 'ID of the user making the deposit',
+              example: 1,
+              minimum: 1,
+            },
+            amount: {
+              type: 'number',
+              description: 'Amount to deposit in pesos',
+              example: 50000,
+              minimum: 0.01,
+            },
+          },
+        },
+        CashWithdrawRequest: {
+          type: 'object',
+          required: ['userId', 'amount'],
+          properties: {
+            userId: {
+              type: 'integer',
+              description: 'ID of the user making the withdrawal',
+              example: 1,
+              minimum: 1,
+            },
+            amount: {
+              type: 'number',
+              description: 'Amount to withdraw in pesos',
+              example: 25000,
+              minimum: 0.01,
+            },
+          },
+        },
+        CashBalanceResponse: {
+          type: 'object',
+          properties: {
+            userId: {
+              type: 'integer',
+              description: 'User ID',
+              example: 1,
+            },
+            availableCash: {
+              type: 'number',
+              description: 'Available cash balance in pesos',
+              example: 75000.5,
+            },
+            totalCash: {
+              type: 'number',
+              description: 'Total cash including reserved funds',
+              example: 80000.5,
+            },
+            reservedCash: {
+              type: 'number',
+              description: 'Cash reserved for pending orders',
+              example: 5000.0,
+            },
+          },
+        },
         ApiResponse: {
           type: 'object',
           properties: {
@@ -445,6 +507,10 @@ const options: swaggerJsdoc.Options = {
       {
         name: 'Orders',
         description: 'Order creation, management and history',
+      },
+      {
+        name: 'Cash Operations',
+        description: 'Cash deposits, withdrawals and balance management',
       },
       {
         name: 'Order Processing',

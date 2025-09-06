@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 // TODO: Implementar path aliases correctamente para imports más limpios
 import { OrderService } from '../services/OrderService';
-import { CreateOrderDto } from '../dto/index';
+import { CreateOrderDto, OrderSideDto } from '../dto/index';
 import { Logger } from '../utils/logger';
 import { AppError } from '../middlewares/errorHandler';
 
@@ -14,7 +14,7 @@ export class OrderController {
 
   /**
    * POST /api/orders
-   * Crear y enviar nueva orden al mercado
+   * Crear y enviar nueva orden al mercado (solo BUY/SELL)
    */
   createOrder = async (
     req: RequestWithValidatedData,
@@ -28,22 +28,52 @@ export class OrderController {
         throw new AppError('Order data is required and must be validated', 400);
       }
 
-      Logger.order('Creating new order', { ...orderDto });
+      // Validación: solo permitir BUY/SELL en endpoint de orders
+      if (
+        orderDto.side !== OrderSideDto.BUY &&
+        orderDto.side !== OrderSideDto.SELL
+      ) {
+        throw new AppError(
+          'Orders endpoint only accepts BUY and SELL orders. Use /api/cash/ endpoints for cash operations.',
+          400
+        );
+      }
+
+      Logger.order('Creating new trading order', { ...orderDto });
 
       const order = await this.orderService.createOrder(orderDto);
 
-      Logger.order('Order created successfully', {
+      Logger.order('Trading order created successfully', {
         orderId: order.id,
         status: order.status,
         side: order.side,
         instrumentId: order.instrumentId,
       });
 
+      // Determinar mensaje basado en el status de la orden
+      let message: string;
+      let success: boolean = true;
+
+      switch (order.status) {
+        case 'FILLED':
+          message = 'Order executed successfully';
+          break;
+        case 'NEW':
+          message = 'Limit order created and pending execution';
+          break;
+        case 'REJECTED':
+          message = `Order rejected: ${this.getRejectReasonFromSide(orderDto.side)}`;
+          success = false; // La orden fue rechazada, es un fallo desde la perspectiva del usuario
+          break;
+        default:
+          message = 'Order created successfully';
+      }
+
       res.status(201).json({
-        success: true,
+        success,
         data: order,
         timestamp: new Date().toISOString(),
-        message: 'Order created and processed successfully',
+        message,
       });
     } catch (error) {
       Logger.error('Error creating order', error as Error);
@@ -214,4 +244,16 @@ export class OrderController {
       next(error);
     }
   };
+
+  /**
+   * Helper para generar mensaje de rechazo basado en el side de la orden
+   */
+  private getRejectReasonFromSide(side: OrderSideDto): string {
+    if (side === OrderSideDto.BUY) {
+      return 'Insufficient cash balance to complete purchase';
+    } else if (side === OrderSideDto.SELL) {
+      return 'Insufficient shares available to sell';
+    }
+    return 'Order validation failed';
+  }
 }

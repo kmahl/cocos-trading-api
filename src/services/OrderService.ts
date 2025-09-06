@@ -60,10 +60,26 @@ export class OrderService {
 
     await this.validateOrder(orderDto);
 
-    const currentPrice =
-      await this.instrumentService.getCurrentPrice(instrumentId);
-    if (!currentPrice) {
-      throw new ValidationError('Unable to get current price for instrument');
+    // Verificar que el instrumento existe para obtener su tipo
+    const instrument =
+      await this.instrumentService.getInstrumentById(instrumentId);
+    if (!instrument) {
+      throw new ValidationError('Instrument not found');
+    }
+
+    let currentPrice: number;
+
+    // Para moneda (ARS), el precio siempre es 1
+    if (instrument.type === 'MONEDA') {
+      currentPrice = 1;
+    } else {
+      // Para otros instrumentos, obtener precio del mercado
+      const marketPrice =
+        await this.instrumentService.getCurrentPrice(instrumentId);
+      if (!marketPrice) {
+        throw new ValidationError('Unable to get current price for instrument');
+      }
+      currentPrice = marketPrice;
     }
 
     const { executionPrice, executionSize } =
@@ -404,8 +420,8 @@ export class OrderService {
       throw new ValidationError('LIMIT orders must have a valid price');
     }
 
-    // Validar que MARKET orders no tengan precio
-    if (type === OrderTypeDto.MARKET && price) {
+    // Validar que MARKET orders no tengan precio (EXCEPTO para moneda que siempre es 1)
+    if (type === OrderTypeDto.MARKET && price && instrument.type !== 'MONEDA') {
       throw new ValidationError('MARKET orders should not specify a price');
     }
 

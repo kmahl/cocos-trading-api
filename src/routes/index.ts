@@ -5,6 +5,7 @@ import portfolioRoutes from './portfolio';
 import instrumentRoutes from './instruments';
 import orderRoutes from './orders';
 import orderProcessingRoutes from './order-processing';
+import cashRoutes from './cash';
 import healthRoutes from './health';
 
 const router = Router();
@@ -26,7 +27,13 @@ router.use('/portfolio', portfolioRoutes);
 router.use('/instruments', instrumentRoutes);
 
 /**
- * Orders routes
+ * Order routes (singular - creates one order)
+ * Base path: /api/order
+ */
+router.use('/order', orderRoutes);
+
+/**
+ * Orders routes (plural - queries multiple orders)
  * Base path: /api/orders
  */
 router.use('/orders', orderRoutes);
@@ -36,6 +43,12 @@ router.use('/orders', orderRoutes);
  * Base path: /api/order-processing
  */
 router.use('/order-processing', orderProcessingRoutes);
+
+/**
+ * Cash Operations routes
+ * Base path: /api/cash
+ */
+router.use('/cash', cashRoutes);
 
 /**
  * Health check routes
@@ -75,6 +88,11 @@ router.get('/', (req, res) => {
           processOne: 'POST /api/order-processing/process/:orderId',
           processBatch: 'POST /api/order-processing/process-batch',
           pending: 'GET /api/order-processing/pending',
+        },
+        cash: {
+          deposit: 'POST /api/cash/deposit',
+          withdraw: 'POST /api/cash/withdraw',
+          balance: 'GET /api/cash/balance/:userId',
         },
       },
       documentation: 'Ver colección de Postman para ejemplos completos',

@@ -7,6 +7,7 @@ import { OrderCalculationService } from '../services/OrderCalculationService';
 import { OrderStatusService } from '../services/OrderStatusService';
 import { OrderExecutionService } from '../services/OrderExecutionService';
 import { PortfolioValidationService } from '../services/PortfolioValidationService';
+import { PortfolioService } from '../services/PortfolioService';
 import { InstrumentService } from '../services/InstrumentService';
 import { OrderRepository } from '../repositories/OrderRepository';
 
@@ -14,6 +15,7 @@ export class ServiceFactory {
   private static instance: ServiceFactory;
 
   private portfolioValidationService: PortfolioValidationService;
+  private portfolioService: PortfolioService;
   private orderRepository: OrderRepository;
   private instrumentService: InstrumentService;
   private calculationService: OrderCalculationService;
@@ -21,7 +23,10 @@ export class ServiceFactory {
   private executionService: OrderExecutionService;
 
   private constructor() {
-    this.portfolioValidationService = new PortfolioValidationService();
+    this.portfolioService = new PortfolioService();
+    this.portfolioValidationService = new PortfolioValidationService(
+      this.portfolioService
+    );
     this.orderRepository = new OrderRepository();
     this.instrumentService = new InstrumentService();
     this.calculationService = new OrderCalculationService();
@@ -32,6 +37,9 @@ export class ServiceFactory {
       this.portfolioValidationService,
       this.orderRepository
     );
+
+    // CashService se crea cuando se necesita porque depende de OrderService
+    // que necesita todas las dependencias inicializadas
   }
 
   static getInstance(): ServiceFactory {
@@ -62,5 +70,9 @@ export class ServiceFactory {
 
   getOrderRepository(): OrderRepository {
     return this.orderRepository;
+  }
+
+  getPortfolioService(): PortfolioService {
+    return this.portfolioService;
   }
 }
