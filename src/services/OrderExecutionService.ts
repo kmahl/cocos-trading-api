@@ -2,7 +2,7 @@
  * Service responsible for order execution logic
  */
 
-import { Order, OrderStatus } from '../entities/Order';
+import { Order, OrderStatus, OrderType } from '../entities/Order';
 import { Logger } from '../utils/logger';
 import { PortfolioValidationService } from './PortfolioValidationService';
 import { OrderRepository } from '../repositories/OrderRepository';
@@ -28,12 +28,17 @@ export class OrderExecutionService {
     }
 
     try {
-      await this.validateOrderAtExecution(order);
+      // SOLO validar para órdenes LIMIT - las MARKET ya fueron validadas en createOrder
+      if (order.type === OrderType.LIMIT) {
+        await this.validateOrderAtExecution(order);
+      }
+
       order.status = OrderStatus.FILLED;
       await this.orderRepository.save(order);
 
       Logger.order('Order executed successfully', {
         orderId,
+        orderType: order.type,
         executionPrice: order.price,
         size: order.size,
       });

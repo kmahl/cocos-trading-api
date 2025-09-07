@@ -124,7 +124,7 @@ export class OrderService {
     }
 
     if (type === OrderType.MARKET) {
-      await this.executionService.executeOrder(savedOrder.id);
+      await this.processOrder(savedOrder.id);
       const processedOrder = await this.getOrderById(savedOrder.id);
       if (!processedOrder) {
         throw new AppError('Failed to retrieve processed order', 500);
