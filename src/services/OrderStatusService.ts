@@ -17,34 +17,19 @@ export class OrderStatusService {
     price: number
   ): Promise<OrderStatus> {
     try {
-      const hasValidFunds = await this.validateFundsAndShares(
-        userId,
-        instrumentId,
-        side,
-        size,
-        price
-      );
+      const hasValidFunds =
+        await this.portfolioValidationService.validateOrderFunds(
+          userId,
+          instrumentId,
+          side,
+          size,
+          price
+        );
 
       return hasValidFunds ? OrderStatus.NEW : OrderStatus.REJECTED;
     } catch (error) {
       Logger.error('Error determining order status', error as Error);
       return OrderStatus.REJECTED;
     }
-  }
-
-  private async validateFundsAndShares(
-    userId: number,
-    instrumentId: number,
-    side: OrderSide,
-    size: number,
-    price: number
-  ): Promise<boolean> {
-    return await this.portfolioValidationService.validateOrderFunds(
-      userId,
-      instrumentId,
-      side,
-      size,
-      price
-    );
   }
 }

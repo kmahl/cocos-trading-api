@@ -2,7 +2,7 @@
  * Order Service - Orchestrates order creation and management
  */
 
-import { Order, OrderStatus, OrderSide, OrderType } from '../entities/Order';
+import { Order, OrderStatus, OrderType } from '../entities/Order';
 import { Logger } from '../utils/logger';
 import { CreateOrderDto } from '../dto/index';
 import { OrderResponseDto } from '../dto/responses';
@@ -201,23 +201,7 @@ export class OrderService {
       return null;
     }
 
-    return {
-      id: order.id,
-      instrumentId: order.instrumentId,
-      userId: order.userId,
-      side: order.side,
-      size: order.size,
-      price: order.price || 0,
-      type: order.type,
-      status: order.status,
-      datetime: order.datetime.toISOString(),
-      instrument: order.instrument
-        ? {
-            ticker: order.instrument.ticker,
-            name: order.instrument.name,
-          }
-        : undefined,
-    };
+    return this.mapOrderToResponse(order);
   }
 
   /**
@@ -258,23 +242,7 @@ export class OrderService {
       return [];
     }
 
-    return orders.map(order => ({
-      id: order.id,
-      instrumentId: order.instrumentId,
-      userId: order.userId,
-      side: order.side,
-      size: order.size,
-      price: order.price || 0,
-      type: order.type,
-      status: order.status,
-      datetime: order.datetime.toISOString(),
-      instrument: order.instrument
-        ? {
-            ticker: order.instrument.ticker,
-            name: order.instrument.name,
-          }
-        : undefined,
-    }));
+    return orders.map(order => this.mapOrderToResponse(order));
   }
 
   /**
@@ -346,77 +314,11 @@ export class OrderService {
       return [];
     }
 
-    return orders.map(order => ({
-      id: order.id,
-      instrumentId: order.instrumentId,
-      userId: order.userId,
-      side: order.side,
-      size: order.size,
-      price: order.price || 0,
-      type: order.type,
-      status: order.status,
-      datetime: order.datetime.toISOString(),
-      instrument: order.instrument
-        ? {
-            ticker: order.instrument.ticker,
-            name: order.instrument.name,
-          }
-        : undefined,
-    }));
+    return orders.map(order => this.mapOrderToResponse(order));
   }
 
   private async processOrder(orderId: number): Promise<void> {
     await this.executionService.executeOrder(orderId);
-  }
-
-  /**
-   * Validar fondos disponibles usando PortfolioValidationService
-   */
-  private async validateFundsWithReserves(
-    userId: number,
-    instrumentId: number,
-    side: OrderSide,
-    size: number,
-    price: number
-  ): Promise<void> {
-    if (side === OrderSide.BUY) {
-      // Para BUY: validar cash disponible (ya considera reservas)
-      const requiredAmount = size * price;
-      const hasEnoughCash =
-        await this.portfolioValidationService.checkAvailableCash(
-          userId,
-          requiredAmount
-        );
-
-      if (!hasEnoughCash) {
-        throw new ValidationError('Insufficient available cash balance');
-      }
-
-      Logger.order('Cash validation passed', {
-        userId,
-        requiredAmount,
-        side: 'BUY',
-      });
-    } else {
-      // Para SELL: validar acciones disponibles (ya considera reservas)
-      const hasEnoughShares =
-        await this.portfolioValidationService.checkAvailableShares(
-          userId,
-          instrumentId,
-          size
-        );
-
-      if (!hasEnoughShares) {
-        throw new ValidationError('Insufficient available shares');
-      }
-
-      Logger.order('Shares validation passed', {
-        userId,
-        instrumentId,
-        requiredShares: size,
-        side: 'SELL',
-      });
-    }
   }
 
   /**
@@ -453,111 +355,6 @@ export class OrderService {
   }
 
   /**
-   * Validar fondos disponibles AL MOMENTO DEL PROCESAMIENTO
-   * Esta validación considera el estado ACTUAL del portfolio
-   */
-  private async validateOrderFundsAtProcessing(
-    userId: number,
-    instrumentId: number,
-    side: OrderSide,
-    size: number,
-    price: number
-  ): Promise<void> {
-    if (side === OrderSide.BUY) {
-      // Validar cash disponible para compra
-      const requiredAmount = size * price;
-      const hasCash = await this.portfolioValidationService.checkAvailableCash(
-        userId,
-        requiredAmount
-      );
-
-      if (!hasCash) {
-        throw new ValidationError(
-          'Insufficient cash balance for purchase at processing time'
-        );
-      }
-
-      Logger.order('Cash validation passed at processing', {
-        userId,
-        requiredAmount,
-        side: 'BUY',
-      });
-    } else {
-      // SELL
-      // Validar acciones disponibles para venta
-      const hasShares =
-        await this.portfolioValidationService.checkAvailableShares(
-          userId,
-          instrumentId,
-          size
-        );
-
-      if (!hasShares) {
-        throw new ValidationError(
-          'Insufficient shares for sale at processing time'
-        );
-      }
-
-      Logger.order('Shares validation passed at processing', {
-        userId,
-        instrumentId,
-        requiredShares: size,
-        side: 'SELL',
-      });
-    }
-  }
-
-  /**
-   * Validar fondos disponibles antes de ejecutar orden
-   */
-  private async validateOrderFunds(
-    userId: number,
-    instrumentId: number,
-    side: OrderSide,
-    size: number,
-    price: number
-  ): Promise<void> {
-    if (side === OrderSide.BUY) {
-      // Validar cash disponible para compra
-      const requiredAmount = size * price;
-      const hasCash = await this.portfolioValidationService.checkAvailableCash(
-        userId,
-        requiredAmount
-      );
-
-      if (!hasCash) {
-        throw new ValidationError('Insufficient cash balance for purchase');
-      }
-
-      Logger.order('Cash validation passed', {
-        userId,
-        requiredAmount,
-        side: 'BUY',
-      });
-    } else {
-      // SELL
-      // Validar acciones disponibles para venta
-      const hasShares =
-        await this.portfolioValidationService.checkAvailableShares(
-          userId,
-          instrumentId,
-          size
-        );
-
-      if (!hasShares) {
-        throw new ValidationError('Insufficient shares for sale');
-      }
-
-      Logger.order('Shares validation passed', {
-        userId,
-        instrumentId,
-        requiredShares: size,
-        side: 'SELL',
-      });
-    }
-  }
-
-  /**
    * Mapear entidad Order a DTO de respuesta
    */
   private mapOrderToResponse(order: Order): OrderResponseDto {
@@ -571,6 +368,12 @@ export class OrderService {
       type: order.type,
       status: order.status,
       datetime: order.datetime.toISOString(),
+      instrument: order.instrument
+        ? {
+            ticker: order.instrument.ticker,
+            name: order.instrument.name,
+          }
+        : undefined,
     };
   }
 }

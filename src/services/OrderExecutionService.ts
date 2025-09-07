@@ -5,13 +5,18 @@
 import { Order, OrderStatus, OrderType } from '../entities/Order';
 import { Logger } from '../utils/logger';
 import { PortfolioValidationService } from './PortfolioValidationService';
+import { PortfolioService } from './PortfolioService';
 import { OrderRepository } from '../repositories/OrderRepository';
 
 export class OrderExecutionService {
+  private portfolioService: PortfolioService;
+
   constructor(
     private portfolioValidationService: PortfolioValidationService,
     private orderRepository: OrderRepository
-  ) {}
+  ) {
+    this.portfolioService = new PortfolioService();
+  }
 
   async executeOrder(orderId: number): Promise<void> {
     const order = (await this.orderRepository.findById(orderId, {
@@ -28,9 +33,11 @@ export class OrderExecutionService {
     }
 
     try {
-      // SOLO validar para órdenes LIMIT - las MARKET ya fueron validadas en createOrder
+      // Para órdenes LIMIT: re-validar porque pueden haber cambiado las condiciones
+      // Para órdenes MARKET: no re-validar porque se ejecutan inmediatamente tras la validación inicial
       if (order.type === OrderType.LIMIT) {
-        await this.validateOrderAtExecution(order);
+        // Validar pero SIN contar esta orden como "reserva" (evita el bug de auto-bloqueo)
+        await this.validateOrderAtExecutionExcludingCurrent(order);
       }
 
       order.status = OrderStatus.FILLED;
@@ -50,13 +57,55 @@ export class OrderExecutionService {
     }
   }
 
-  private async validateOrderAtExecution(order: Order): Promise<void> {
-    await this.portfolioValidationService.validateOrderFundsOrThrow(
-      order.userId,
-      order.instrumentId,
-      order.side,
-      order.size,
-      order.price || 0
-    );
+  /**
+   * Validar orden pero calculando disponibilidad SIN incluir la orden actual
+   * Evita el bug donde la orden se auto-bloquea por reservar sus propios recursos
+   */
+  private async validateOrderAtExecutionExcludingCurrent(
+    order: Order
+  ): Promise<void> {
+    // Obtener portfolio calculado (incluye reservas de TODAS las órdenes)
+    const portfolio = await this.portfolioService.getPortfolio(order.userId);
+
+    // Calcular cuánto de los recursos "reservados" corresponde a esta orden
+    if (order.side === 'BUY') {
+      // Para compras: agregar de vuelta el cash que esta orden tenía reservado
+      const orderReservedCash = order.size * (order.price || 0);
+      const adjustedAvailable =
+        portfolio.cashBalance.available + orderReservedCash;
+
+      if (adjustedAvailable < orderReservedCash) {
+        throw new Error('Insufficient available cash balance');
+      }
+
+      Logger.order('Cash validation passed (excluding current order)', {
+        orderId: order.id,
+        originalAvailable: portfolio.cashBalance.available,
+        adjustedAvailable,
+        required: orderReservedCash,
+      });
+    } else if (order.side === 'SELL') {
+      // Para ventas: agregar de vuelta las acciones que esta orden tenía reservadas
+      const position = portfolio.positions.find(
+        p => p.instrumentId === order.instrumentId
+      );
+      if (!position) {
+        throw new Error('No position found for instrument');
+      }
+
+      const adjustedAvailable = position.quantity.available + order.size;
+
+      if (adjustedAvailable < order.size) {
+        throw new Error('Insufficient available shares');
+      }
+
+      Logger.order('Shares validation passed (excluding current order)', {
+        orderId: order.id,
+        instrumentId: order.instrumentId,
+        originalAvailable: position.quantity.available,
+        adjustedAvailable,
+        required: order.size,
+      });
+    }
   }
 }
